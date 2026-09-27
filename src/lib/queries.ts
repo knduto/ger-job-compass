@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export async function must<T>(p: PromiseLike<{ data: T | null; error: any; count?: number | null }>) {
+export async function must<R extends { error: any }>(p: PromiseLike<R>): Promise<R> {
   const r = await p;
   if (r.error) throw new Error(r.error.message);
   return r;

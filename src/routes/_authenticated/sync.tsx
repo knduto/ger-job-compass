@@ -42,10 +42,11 @@ function SyncPage() {
   async function run() {
     try {
       const r = await start();
-      if (!r.keywords.length) return toast.error("Keine aktiven Suchbegriffe.");
+      if (!r.keywords.length) { toast.error("Keine aktiven Suchbegriffe."); return; }
       let fetched = 0, nw = 0;
       for (let i = 0; i < r.keywords.length; i++) {
-        setProg({ i, n: r.keywords.length, kw: r.keywords[i], fetched, new: nw });
+        const kw = r.keywords[i]!;
+        setProg({ i, n: r.keywords.length, kw, fetched, new: nw });
         try {
           const c = await one({ data: { runId: r.runId, startedAt: r.startedAt, keyword: r.keywords[i] } });
           fetched += c.fetched; nw += c.new;
@@ -68,7 +69,7 @@ function SyncPage() {
     const t = newTerm.trim().slice(0, 120);
     if (!t) return;
     const { error } = await supabase.from("search_keywords").insert({ term: t });
-    if (error) return toast.error(error.message.includes("duplicate") ? "Begriff existiert bereits" : error.message);
+    if (error) { toast.error(error.message.includes("duplicate") ? "Begriff existiert bereits" : error.message); return; }
     setNewTerm(""); qc.invalidateQueries({ queryKey: ["keywords"] });
   }
 

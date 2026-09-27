@@ -59,7 +59,7 @@ function Reports() {
 
   const totalActive = rows.reduce((s, r) => s + (r.active_jobs ?? 0), 0);
   const cmp = rows.filter((r) => selected.includes(r.city!));
-  const range = stats.data?.length ? `${fmtDate(stats.data.reduce((m, c) => (c.first_seen! < m ? c.first_seen! : m), stats.data[0].first_seen!))} – ${fmtDate(stats.data.reduce((m, c) => (c.last_seen! > m ? c.last_seen! : m), stats.data[0].last_seen!))}` : "–";
+  const range = stats.data?.length ? `${fmtDate(stats.data.reduce((m, c) => (c.first_seen! < m ? c.first_seen! : m), stats.data[0]!.first_seen!))} – ${fmtDate(stats.data.reduce((m, c) => (c.last_seen! > m ? c.last_seen! : m), stats.data[0]!.last_seen!))}` : "–";
 
   return (
     <>

@@ -42,7 +42,7 @@ function Pipeline() {
     const patch: any = { stage };
     if (stage === "applied" && !a.applied_at) patch.applied_at = new Date().toISOString().slice(0, 10);
     const { error } = await supabase.from("applications").update(patch).eq("id", a.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["applications"] });
   }
 
@@ -112,12 +112,12 @@ function EditDialog({ app, onClose }: { app: App; onClose: () => void }) {
       stage: f.stage, applied_at: f.applied_at || null, resume_version: f.resume_version.trim() || null,
       contact: f.contact.trim() || null, notes: f.notes.trim() || null, follow_up: f.follow_up || null,
     }).eq("id", app.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Gespeichert"); qc.invalidateQueries({ queryKey: ["applications"] }); onClose();
   }
   async function remove() {
     const { error } = await supabase.from("applications").delete().eq("id", app.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["applications"] }); onClose();
   }
   return (

@@ -8,7 +8,7 @@ type Admin = any;
 
 export function normalizeCity(ort?: string | null) {
   if (!ort) return null;
-  const c = ort.split(",")[0].replace(/\s*\(.*\)\s*$/, "").trim();
+  const c = (ort.split(",")[0] ?? "").replace(/\s*\(.*\)\s*$/, "").trim();
   return c || null;
 }
 

@@ -53,7 +53,7 @@ function isGermany(j: any) {
 }
 
 /** Sync one keyword (or all IT jobs when keyword is null) across all IT professional fields. Returns counters. */
-export async function syncKeyword(admin: Admin, keyword: string | null, runStartedAt: string, loc?: { wo: string; umkreis?: number }, fields = IT_BERUFSFELDER) {
+export async function syncKeyword(admin: Admin, keyword: string | null, runStartedAt: string, loc?: { wo: string; umkreis?: number }, fields: readonly string[] = IT_BERUFSFELDER) {
   const c = { requests: 0, fetched: 0, skipped: 0, new: 0, updated: 0, errors: [] as string[] };
   const collected = new Map<string, ReturnType<typeof mapJob>>();
   const label = keyword ?? `stadt:${loc?.wo ?? ""}`;
@@ -124,7 +124,7 @@ export async function startRun(admin: Admin, trigger: string) {
   return data;
 }
 
-export async function recordKeyword(admin: Admin, runId: string, c: Awaited<ReturnType<typeof syncKeyword>>) {
+export async function recordKeyword(admin: Admin, runId: string, c: { requests: number; fetched: number; skipped: number; new: number; updated: number; errors: string[] }) {
   const { data: run } = await admin.from("sync_runs").select("*").eq("id", runId).single();
   if (!run) throw new Error("Run not found");
   await admin.from("sync_runs").update({

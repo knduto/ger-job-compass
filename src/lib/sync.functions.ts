@@ -94,7 +94,8 @@ export const finishCityRun = createServerFn({ method: "POST" })
     const { data: run, error: readError } = await supabaseAdmin.from("sync_runs").select("keywords_done,keywords_total,errors").eq("id", data.runId).single();
     if (readError || !run) throw new Error(readError?.message ?? "Abruf nicht gefunden");
     const complete = run.keywords_done >= run.keywords_total;
-    const status = !complete ? "incomplete" : (run.errors ?? []).length ? "partial" : "success";
+    const errors = Array.isArray(run.errors) ? run.errors : [];
+    const status = !complete ? "incomplete" : errors.length ? "partial" : "success";
     const { error } = await supabaseAdmin.from("sync_runs").update({
       status,
       finished_at: new Date().toISOString(),

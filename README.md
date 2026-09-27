@@ -1,36 +1,49 @@
-# Germany Job Explorer
+# Smart-DE-Reise — Mein Weg bei der Jobsuche
 
-I am planning to move to Germany on chancekarte and i want to scale the my  job such by creating an interactive web interface that i can explore job in my sector (to share resume), can do pipelines, can view employers, view data health, filter data by different createria available. do reports based on cities. this reports will be data driven since they will help me select a settlement city. I need a tab to fetch available live data daily and generaly i have a growing database that can be accessed and analysed.  Good news — the Bundesagentur für Arbeit (Arbeitsagentur) actually exposes a public, undocumented-but-usable REST API that their own official Jobsuche app uses. There's a well-known community project on GitHub (bundesAPI/jobsuche-api) that documents it, so you don't need to scrape HTML at all.
+A private, single-user web app for an IT job search in Germany (Chancenkarte move). The interface is in **German**; this documentation is in English.
 
-How it works
+## What it does
 
-Base URL: https://rest.arbeitsagentur.de/jobboerse/jobsuche-service
+- **Job discovery (Explore):** search stored IT postings by title, employer, city, Berufsfeld, contract, work time, publication age, home office, salary and expiry.
+- **Application tracking (Pipeline):** track applications per posting. No resume or file uploads.
+- **Employers:** employer profiles and direct-vs-agency hiring.
+- **Reports:** city ranking with an explained, adjustable score; German-language requirements; market, employer, lifecycle and trend sections; PDF and Excel downloads. Reports focus on the cities you track, or the top 30 cities by data when none are tracked.
+- **Data health:** sync history, coverage and language-analysis coverage.
+- **Live-Abruf (sync):** manual keyword sync, on-demand city sync (all IT jobs or saved keywords, with radius), and a daily scheduled sync.
 
-Search endpoint: GET https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs (or pc/v4/app/jobs), which lets you filter available job postings with various GET parameters GitHub
+## Data source and accuracy rules
 
-Auth: if a client_id doesn't work, you can instead use the header "X-API-KEY: jobboerse-jobsuche" GitHub — this is the public key the app itself uses, so no registration needed.
+- Job data comes **only** from the Bundesagentur für Arbeit (Arbeitsagentur) Jobsuche API: search `pc/v6/jobs`, details `pc/v4/jobdetails/{base64(refnr)}`. No invented or sample data.
+- Only the four IT Berufsfelder in `src/lib/it-fields.ts` are queried, and only postings with a German location are stored.
+- Jobs are upserted by `refnr` and never deleted; they are marked expired only after a complete, error-free run where they were unseen for 3 days.
+- Reports and exports read the **stored database**, not the live API.
+- **Language analysis is evidence-based:** a CEFR level (A1–C2) is assigned only when the description states it. Vague wording ("gute Deutschkenntnisse") is classed "German required, level unclear". Coverage is shown, since only postings with fetched descriptions are analysed.
 
-Detail lookup: the typical flow is search via /pc/v6/jobs or /pc/v4/app/jobs, note the refnr from the response, then fetch details via /pc/v4/jobdetails/{base64(refnr)}, GitHub where the encryptedJobCode is just the Base64-encoded value of the refnr from the search response. Also see https://jobsuche.api.bund.dev/ fetch all the parameters posible more https://github.com/bundesAPI/jobsuche-api/blob/main/README.md
+## Quick start
 
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://ger-job-compass.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/50f579f7-6d0a-498c-9333-f436849fea3e).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+See [SETUP.md](SETUP.md). In short:
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+git clone <your-repository-url>
+cd <repository-folder>
+cp .env.example .env   # then fill in values
+bun install            # or: npm install
+bun run dev            # or: npm run dev
 ```
+
+## Documentation
+
+- [SETUP.md](SETUP.md) — local setup against the hosted backend
+- [REQUIREMENTS.md](REQUIREMENTS.md) — software, hosted-service and scheduling requirements
+- [STACK.md](STACK.md) — technologies in use
+- [MIGRATIONS.md](MIGRATIONS.md) — database migration log and rollback policy
+- [AGENTS.md](AGENTS.md) — architecture rules
+- [roadmap.md](roadmap.md) — tasks and open items
+
+## Current constraints
+
+- Single private user; keyword sync paths do not yet filter keywords by owner (OPEN-001 in `roadmap.md`).
+- Preview and published app share **one** hosted database; schema changes should be tested in an isolated draft first.
+- Language metrics are only as representative as their description coverage.
+- The daily sync needs a stable, always-reachable URL (the published app).
+- Password-reset emails use the default sender.

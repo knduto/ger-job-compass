@@ -9,7 +9,7 @@ All notable changes to Smart-DE-Reise are documented here, in a style based on [
 Staged documentation rollout (each stage built and reviewed in its own draft):
 
 - Stage 1 — `MIGRATIONS.md`, `drizzle/rollbacks/*.down.sql` for migrations 0000–0006, seed script.
-- Stage 2 — `README.md`, `SETUP.md`, `.env.example`, `STACK.md`, `REQUIREMENTS.md`. *(Note: at the time of writing Stage 3, only `README.md` was found present in this draft; `SETUP.md`, `.env.example`, `STACK.md`, and `REQUIREMENTS.md` were not found in the project tree — see the accompanying report.)*
+- Stage 2 — `README.md`, `SETUP.md`, `.env.example`, `STACK.md`, `REQUIREMENTS.md`.
 - **Stage 3 (this change)** — `ARCHITECTURE.md`, `CHANGELOG.md`, and this roadmap update.
 - Stage 4 (planned, not yet done) — `CONTRIBUTING.md`, `DEPLOYMENT-LOCAL.md`, `AGENTS.md` updates.
 
@@ -60,5 +60,5 @@ Entries are ordered oldest to newest. Unless a commit hash is cited, the date is
 ### 2026-09-27 — Documentation stages
 - Stage 1 (rollback files, `MIGRATIONS.md`, seed script) delivered and reintegrated. Source: `roadmap.md` (checked) and commit `5d8127e` ("Reintegrated Stage 1 work").
 - Project `README.md` added. Source: commit `184cbc5` ("Add project README").
-- Stage 2 outputs are listed as in progress; only `README.md` was confirmed present in this draft as of Stage 3 (see note under Unreleased).
+- Stage 2 (`README.md`, `SETUP.md`, `.env.example`, `STACK.md`, `REQUIREMENTS.md`) delivered. Source: `roadmap.md`.
 

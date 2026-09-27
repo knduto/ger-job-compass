@@ -14,10 +14,290 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      applications: {
+        Row: {
+          applied_at: string | null
+          contact: string | null
+          created_at: string
+          follow_up: string | null
+          id: string
+          notes: string | null
+          refnr: string
+          resume_version: string | null
+          stage: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          contact?: string | null
+          created_at?: string
+          follow_up?: string | null
+          id?: string
+          notes?: string | null
+          refnr: string
+          resume_version?: string | null
+          stage?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          applied_at?: string | null
+          contact?: string | null
+          created_at?: string
+          follow_up?: string | null
+          id?: string
+          notes?: string | null
+          refnr?: string
+          resume_version?: string | null
+          stage?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_refnr_fkey"
+            columns: ["refnr"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["refnr"]
+          },
+        ]
+      }
+      job_details: {
+        Row: {
+          description: string | null
+          fetched_at: string
+          raw: Json
+          refnr: string
+        }
+        Insert: {
+          description?: string | null
+          fetched_at?: string
+          raw: Json
+          refnr: string
+        }
+        Update: {
+          description?: string | null
+          fetched_at?: string
+          raw?: Json
+          refnr?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_details_refnr_fkey"
+            columns: ["refnr"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["refnr"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          alle_berufe: string[]
+          beruf: string | null
+          berufsfelder: string[]
+          changed_at: string | null
+          city: string | null
+          city_raw: string | null
+          contract: string | null
+          country: string | null
+          employer: string | null
+          employer_hash: string | null
+          entry_from: string | null
+          expired: boolean
+          external_url: string | null
+          first_published: string | null
+          first_seen: string
+          fulltime: boolean | null
+          homeoffice: boolean | null
+          keywords: string[]
+          last_seen: string
+          lat: number | null
+          lng: number | null
+          parttime: boolean | null
+          plz: string | null
+          published_from: string | null
+          raw: Json
+          refnr: string
+          region: string | null
+          salary_from: number | null
+          salary_to: number | null
+          salary_type: string | null
+          title: string
+        }
+        Insert: {
+          alle_berufe?: string[]
+          beruf?: string | null
+          berufsfelder?: string[]
+          changed_at?: string | null
+          city?: string | null
+          city_raw?: string | null
+          contract?: string | null
+          country?: string | null
+          employer?: string | null
+          employer_hash?: string | null
+          entry_from?: string | null
+          expired?: boolean
+          external_url?: string | null
+          first_published?: string | null
+          first_seen?: string
+          fulltime?: boolean | null
+          homeoffice?: boolean | null
+          keywords?: string[]
+          last_seen?: string
+          lat?: number | null
+          lng?: number | null
+          parttime?: boolean | null
+          plz?: string | null
+          published_from?: string | null
+          raw: Json
+          refnr: string
+          region?: string | null
+          salary_from?: number | null
+          salary_to?: number | null
+          salary_type?: string | null
+          title: string
+        }
+        Update: {
+          alle_berufe?: string[]
+          beruf?: string | null
+          berufsfelder?: string[]
+          changed_at?: string | null
+          city?: string | null
+          city_raw?: string | null
+          contract?: string | null
+          country?: string | null
+          employer?: string | null
+          employer_hash?: string | null
+          entry_from?: string | null
+          expired?: boolean
+          external_url?: string | null
+          first_published?: string | null
+          first_seen?: string
+          fulltime?: boolean | null
+          homeoffice?: boolean | null
+          keywords?: string[]
+          last_seen?: string
+          lat?: number | null
+          lng?: number | null
+          parttime?: boolean | null
+          plz?: string | null
+          published_from?: string | null
+          raw?: Json
+          refnr?: string
+          region?: string | null
+          salary_from?: number | null
+          salary_to?: number | null
+          salary_type?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      search_keywords: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          term: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          term: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          term?: string
+        }
+        Relationships: []
+      }
+      sync_runs: {
+        Row: {
+          errors: Json
+          expired_count: number
+          fetched: number
+          finished_at: string | null
+          id: string
+          keywords_done: number
+          keywords_total: number
+          new_count: number
+          requests: number
+          skipped_non_de: number
+          started_at: string
+          status: string
+          trigger: string
+          updated_count: number
+        }
+        Insert: {
+          errors?: Json
+          expired_count?: number
+          fetched?: number
+          finished_at?: string | null
+          id?: string
+          keywords_done?: number
+          keywords_total?: number
+          new_count?: number
+          requests?: number
+          skipped_non_de?: number
+          started_at?: string
+          status?: string
+          trigger?: string
+          updated_count?: number
+        }
+        Update: {
+          errors?: Json
+          expired_count?: number
+          fetched?: number
+          finished_at?: string | null
+          id?: string
+          keywords_done?: number
+          keywords_total?: number
+          new_count?: number
+          requests?: number
+          skipped_non_de?: number
+          started_at?: string
+          status?: string
+          trigger?: string
+          updated_count?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      city_stats: {
+        Row: {
+          active_jobs: number | null
+          avg_salary: number | null
+          city: string | null
+          employers: number | null
+          first_seen: string | null
+          last_seen: string | null
+          new_30d: number | null
+          new_7d: number | null
+          permanent_pct: number | null
+          remote_pct: number | null
+          salary_pct: number | null
+          total_jobs: number | null
+        }
+        Relationships: []
+      }
+      employer_stats: {
+        Row: {
+          active_jobs: number | null
+          cities: number | null
+          city_list: string[] | null
+          employer: string | null
+          first_seen: string | null
+          last_seen: string | null
+          total_jobs: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

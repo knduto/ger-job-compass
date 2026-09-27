@@ -18,6 +18,10 @@ From now on every database change, document and commit follows a fixed, written 
 - `REQUIREMENTS.md`: functional and non-functional requirements (accuracy, IT fields only, Germany only), a single private user role, out of scope (resume uploads, invented data), and open questions.
 - `CHANGELOG.md`: Keep a Changelog format, with past work rebuilt into version entries.
 - `CONTRIBUTING.md`: Conventional Commits rules (feat, fix, chore, docs, refactor, test, migration), one logical change per commit, `migration(scope):` commits that reference MIGRATIONS.md, and the pre-change confirmation process.
+- `DEPLOYMENT-LOCAL.md`: full guide to running the app on your own computer.
+  - Option A (simplest): run the app locally but keep using the hosted Lovable Cloud database. Covers getting the code through GitHub, installing Node/bun, `.env` setup, dev mode, a production build, keeping it running (pm2 or a system service), and optional access from other devices on your network.
+  - Option B (fully offline): self-host the database with Docker, apply every migration in order, seed your keywords, set up sign-in, and change the app's connection settings.
+  - Daily sync on a local machine: a scheduled task that calls the sync address with the secret token. Also covers backups (database dump and restore), updating to new versions, troubleshooting, and a verification checklist.
 
 ## 3. Enforcement
 - Add these rules to `AGENTS.md` so every future session follows them: out-of-date docs count as bugs, and each change updates CHANGELOG and any affected docs.

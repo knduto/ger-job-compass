@@ -148,5 +148,44 @@ export async function finishRun(admin: Admin, runId: string, expireDays = 3) {
   }
   const status = !complete ? "incomplete" : clean ? "success" : "partial";
   await admin.from("sync_runs").update({ status, finished_at: new Date().toISOString(), expired_count: expired }).eq("id", runId);
+  if (status === "success") await recordMarketSnapshots(admin);
   return { status, expired };
+}
+
+async function recordMarketSnapshots(admin: Admin) {
+  const jobs: any[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin.from("jobs").select("refnr,city,employer,expired,first_published,published_from,homeoffice,salary_from").range(from, from + 999);
+    if (error) throw new Error(error.message);
+    jobs.push(...(data ?? []));
+    if ((data?.length ?? 0) < 1000) break;
+  }
+  const refs = jobs.map((job) => job.refnr);
+  const analyses: any[] = [];
+  for (let i = 0; i < refs.length; i += 500) {
+    const { data } = await admin.from("job_language_analysis").select("refnr,german_required,english_accessible").in("refnr", refs.slice(i, i + 500));
+    analyses.push(...(data ?? []));
+  }
+  const language = new Map(analyses.map((row) => [row.refnr, row]));
+  const groups = new Map<string, any[]>();
+  for (const job of jobs) {
+    const city = job.city ?? "";
+    groups.set(city, [...(groups.get(city) ?? []), job]);
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  const rows = [...groups].map(([city, list]) => {
+    const active = list.filter((job) => !job.expired);
+    const analysed = active.filter((job) => language.has(job.refnr));
+    return { snapshot_date: date, city, active_jobs: active.length, expired_jobs: list.length - active.length,
+      new_7d: active.filter((job) => { const published = job.first_published ?? job.published_from; return published && Date.now() - new Date(published).getTime() <= 7 * 86400000; }).length,
+      employers: new Set(active.map((job) => job.employer).filter(Boolean)).size,
+      salary_pct: active.length ? 100 * active.filter((job) => job.salary_from !== null).length / active.length : 0,
+      remote_pct: active.length ? 100 * active.filter((job) => job.homeoffice).length / active.length : 0,
+      analysed_jobs: analysed.length, german_required: analysed.filter((job) => language.get(job.refnr)?.german_required).length,
+      english_accessible: analysed.filter((job) => language.get(job.refnr)?.english_accessible).length };
+  });
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await admin.from("market_snapshots").upsert(rows.slice(i, i + 200), { onConflict: "snapshot_date,city" });
+    if (error) throw new Error(error.message);
+  }
 }

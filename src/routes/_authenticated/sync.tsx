@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { finishSyncRun, startSyncRun, syncOneKeyword } from "@/lib/sync.functions";
+import { processLanguageBatch } from "@/lib/reports.functions";
 import { PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ function SyncPage() {
   const start = useServerFn(startSyncRun);
   const one = useServerFn(syncOneKeyword);
   const finish = useServerFn(finishSyncRun);
+  const analyse = useServerFn(processLanguageBatch);
   const [prog, setProg] = useState<{ i: number; n: number; kw: string; fetched: number; new: number } | null>(null);
   const [newTerm, setNewTerm] = useState("");
 
@@ -84,7 +86,7 @@ function SyncPage() {
           <p className="mt-2 text-xs text-muted-foreground">Bitte Seite offen lassen. Anfragen werden bewusst verlangsamt, um die Schnittstelle zu schonen.</p>
         </div>
       )}
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <div>
           <h2 className="mb-3 text-lg font-semibold">Letzte Abrufe</h2>
           <RunTable runs={runs.data ?? []} />
@@ -98,10 +100,10 @@ function SyncPage() {
             </ul>
           </div>
         </div>
-        <aside className="rounded-lg border bg-card p-4">
+         <aside className="self-start rounded-lg border bg-card p-4 xl:sticky xl:top-6">
           <h2 className="mb-3 font-semibold">Suchbegriffe ({kws.data?.filter((k) => k.active).length ?? 0} aktiv)</h2>
           <div className="mb-3 flex gap-2"><Input value={newTerm} onChange={(e) => setNewTerm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addTerm()} placeholder="Neuer Begriff" /><Button onClick={addTerm}>+</Button></div>
-          <div className="max-h-[480px] space-y-1 overflow-y-auto text-sm">
+           <div className="max-h-64 space-y-1 overflow-y-auto pr-1 text-sm xl:max-h-[360px]">
             {(kws.data ?? []).map((k) => (
               <div key={k.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted">
                 <span className={k.active ? "" : "text-muted-foreground line-through"}>{k.term}</span>
@@ -112,6 +114,10 @@ function SyncPage() {
               </div>
             ))}
           </div>
+           <Button variant="outline" className="mt-3 w-full" onClick={async () => {
+             try { const result = await analyse({ data: { limit: 20 } }); toast.success(`${result.processed} Beschreibungen analysiert`); qc.invalidateQueries(); }
+             catch (error) { toast.error((error as Error).message); }
+           }}>Sprachanalyse: nächste 20</Button>
         </aside>
       </div>
     </>

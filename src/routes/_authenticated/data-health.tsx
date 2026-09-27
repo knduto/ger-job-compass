@@ -28,7 +28,7 @@ function Health() {
     queryKey: ["health"],
     queryFn: async () => {
       const stale = new Date(Date.now() - 2 * 86400000).toISOString();
-      const [total, active, expired, salary, employer, geo, city, staleN, details, runs, ...fields] = await Promise.all([
+       const [total, active, expired, salary, employer, geo, city, staleN, details, analysed, runs, ...fields] = await Promise.all([
         cnt((x) => x), cnt((x) => x.eq("expired", false)), cnt((x) => x.eq("expired", true)),
         cnt((x) => x.eq("expired", false).not("salary_from", "is", null)),
         cnt((x) => x.eq("expired", false).not("employer", "is", null)),
@@ -36,10 +36,11 @@ function Health() {
         cnt((x) => x.eq("expired", false).not("city", "is", null)),
         cnt((x) => x.eq("expired", false).lt("last_seen", stale)),
         (async () => (await must(supabase.from("job_details").select("refnr", { count: "exact", head: true }))).count ?? 0)(),
+         (async () => (await must(supabase.from("job_language_analysis").select("refnr", { count: "exact", head: true }))).count ?? 0)(),
         (async () => (await must(supabase.from("sync_runs").select("*").order("started_at", { ascending: false }).limit(30))).data ?? [])(),
         ...IT_BERUFSFELDER.map((f) => cnt((x) => x.eq("expired", false).contains("berufsfelder", [f]))),
       ]);
-      return { total, active, expired, salary, employer, geo, city, staleN, details, runs, fields };
+       return { total, active, expired, salary, employer, geo, city, staleN, details, analysed, runs, fields };
     },
   });
   const d = q.data;
@@ -57,12 +58,13 @@ function Health() {
         <Stat label="Veraltet (>2 Tage nicht gesehen)" value={fmt(d?.staleN)} hint="Noch aktiv, aber im letzten Abruf fehlend" />
       </div>
       <h2 className="mb-3 mt-8 text-lg font-semibold">Vollständigkeit (aktive Stellen)</h2>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+       <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
         <Stat label="Mit Gehaltsangabe" value={pct(d?.salary)} />
         <Stat label="Mit Arbeitgeber" value={pct(d?.employer)} />
         <Stat label="Mit Stadt" value={pct(d?.city)} />
         <Stat label="Mit Geo-Koordinaten" value={pct(d?.geo)} />
         <Stat label="Details geladen" value={fmt(d?.details)} hint="Beschreibungen werden beim Öffnen geladen" />
+         <Stat label="Sprache analysiert" value={pct(d?.analysed)} hint={`${fmt(d?.analysed)} von ${fmt(d?.active)} aktiven Stellen`} />
       </div>
       <h2 className="mb-3 mt-8 text-lg font-semibold">Aktive Stellen je IT-Berufsfeld</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -27,6 +27,41 @@ From now on every database change, document and commit follows a fixed, written 
 - Add these rules to `AGENTS.md` so every future session follows them: out-of-date docs count as bugs, and each change updates CHANGELOG and any affected docs.
 - Limitation: Lovable writes its own commits here, so I cannot control their message format. Conventional Commits apply fully to commits you push from a local copy. An optional check that validates commit messages can be added for that local workflow.
 
+## 4. Your clarifications
+
+### 4.1 Rollback files for all existing migrations
+Yes, this covers every existing migration from 0000 to 0006. I will create exactly these 7 files in `drizzle/rollbacks/`:
+1. `0000_init_smart_de_reise.down.sql`
+2. `0001_city_stats_concentration.down.sql`
+3. `0002_city_stats_by_publication.down.sql`
+4. `0003_cron_token_setter.down.sql`
+5. `0004_add_language_analysis_and_market_snapshots.down.sql`
+6. `0005_create_tracked_cities.down.sql`
+7. `0006_scope_search_keywords_to_owner.down.sql`
+
+Views changed by 0001 and 0002 roll back to the previous view definition, not to "drop". 0000 and 0006 would delete your jobs or keyword ownership, so each has a "do not run without a backup" header.
+
+### 4.2 Staging and preview safety
+- Today there is no separate staging database. The preview and the published app share one hosted database, so every applied migration changes live data right away.
+- Proposed safe route for future schema changes: build them in a Lovable draft. A draft runs on its own isolated backend, and its schema changes apply to the real database only when you accept the draft. I will test the migration and the app there, show you the results, and then you accept.
+- Fallback for small changes: first apply the SQL inside a throwaway schema (for example `staging_test`), check it, then drop that schema.
+- Stages 1–4 are documentation only. No migration is applied, so none of this is needed yet.
+
+### 4.3 Staged rollout
+Confirmed. After each stage I stop and wait for your review:
+- Stage 1: the 7 rollback files, `MIGRATIONS.md`, and the seed script
+- Stage 2: `README.md`, `SETUP.md` (plus `.env.example`), `STACK.md`, `REQUIREMENTS.md`
+- Stage 3: `ARCHITECTURE.md`, `CHANGELOG.md`
+- Stage 4: `CONTRIBUTING.md`, `DEPLOYMENT-LOCAL.md`, `AGENTS.md` updates
+
+Lovable saves each stage as its own version, and I can't set the commit message text myself (see section 3).
+
+### 4.4 What "backward-compatible" means
+- Backward-compatible (Yes): new tables, views, functions, indexes or policies; new nullable columns or columns with a default; widening a type; adding a policy that doesn't hide rows the running app already reads.
+- Breaking (No): dropped or renamed tables or columns; narrowing or changing a type; new NOT NULL without a default; new constraints that existing rows or app writes may fail; replacing a policy or view so the app loses rows or columns it uses.
+- Ambiguous (Flagged): the entry is marked "Flagged" with the reason written out. Expected flags: 0006 (it limited keyword access to their owner, which changed what the app could see) and 0001/0002 (view definitions were replaced, so any change to their columns has to be checked).
+- 0000 is the initial schema, so it is marked "N/A (baseline)".
+
 ## Technical details
 - Rollback files are documentation-first and are never run automatically.
 - `.env.example` lists only variable names (VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_PROJECT_ID) with no values.

@@ -28,3 +28,6 @@
 - Every new migration in `drizzle/migrations/` ships with a matching `drizzle/rollbacks/NNNN_name.down.sql` and a `MIGRATIONS.md` log row using its compatibility criteria — rollbacks and the log keep schema history reversible and auditable.
 - Larger documentation work is delivered in stages, each built in an isolated draft and accepted by the owner before the next stage — the owner reviews before anything lands in main.
 - `.env` and `.env.*` are gitignored; only `.env.example` with placeholder values is committed — real connection values never enter git.
+- Every new database migration must include a matching rollback file in `drizzle/rollbacks/`, update `MIGRATIONS.md`, classify the migration as backward-compatible or breaking using the documented criteria, and flag ambiguous cases for review.
+- Every planned stage of work must be built in an isolated draft first, reviewed and explicitly accepted by John, and only then merged into the main project; never write staged work directly to main before that review.
+- Never commit `.env` or any file containing secrets; commit only `.env.example` with safe placeholder values, and keep `.env` plus environment-specific variants ignored by Git.

@@ -45,6 +45,8 @@ function Reports() {
   const [filters, setFilters] = useState(defaultFilters);
   const [weights, setWeights] = useState(defaultWeights);
   const [selected, setSelected] = useState<string[]>([]);
+  const [detailCity, setDetailCity] = useState<string | null>(null);
+  const [showScoreInfo, setShowScoreInfo] = useState(false);
   const [processing, setProcessing] = useState(false);
   const cities = useQuery({ queryKey: ["city_stats"], queryFn: fetchAllCityStats });
   const keywords = useQuery({ queryKey: ["keywords-report"], queryFn: async () => (await must(supabase.from("search_keywords").select("term").eq("active", true).order("term"))).data ?? [] });
@@ -61,7 +63,7 @@ function Reports() {
   }, {});
   const trends = Object.values(snapshotSeries).map((r: any) => ({ ...r, englishPct: r.analysed ? +(100 * r.english / r.analysed).toFixed(1) : 0 }));
   const update = <K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) => setFilters((current) => ({ ...current, [key]: value }));
-  const methodology = ["Quelle: Bundesagentur für Arbeit Jobsuche API; keine erfundenen oder extern ergänzten Stellen.", "A1–C2 wird nur vergeben, wenn das Niveau ausdrücklich in der Stellenbeschreibung steht.", "Vage Angaben wie „gute Deutschkenntnisse“ bleiben als „Deutsch erforderlich, Niveau unklar“ separat.", `Sprachabdeckung: ${metrics.analysed} von ${rows.length} gefilterten Stellen (${analysedPct.toFixed(1)} %).`, "Agenturhinweise beruhen ausschließlich auf klaren Begriffen im Arbeitgebernamen; alle anderen bleiben unklassifiziert.", "Historische Trends entstehen erst aus täglichen vollständigen Abrufen; ältere Punkte werden nicht rückwirkend erfunden."];
+  const methodology = ["Quelle: Bundesagentur für Arbeit Jobsuche API; keine erfundenen oder extern ergänzten Stellen.", "A1–C2 wird nur vergeben, wenn das Niveau ausdrücklich in der Stellenbeschreibung steht.", "Vage Angaben wie „gute Deutschkenntnisse“ bleiben als „Deutsch erforderlich, Niveau unklar“ separat.", `Sprachabdeckung: ${metrics.analysed} von ${rows.length} gefilterten Stellen (${analysedPct.toFixed(1)} %).`, "Agenturhinweise beruhen ausschließlich auf klaren Begriffen im Arbeitgebernamen; alle anderen bleiben unklassifiziert.", "Historische Trends entstehen erst aus täglichen vollständigen Abrufen; ältere Punkte werden nicht rückwirkend erfunden.", "Alle Analysen basieren auf gespeicherten Datenbankinhalten; beim Anzeigen oder Herunterladen der Berichte werden keine Live-API-Aufrufe durchgeführt."];
 
   async function pdf() {
     if (!rows.length) return;

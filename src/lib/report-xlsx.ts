@@ -28,6 +28,6 @@ export async function downloadReportXlsx(input: { filters: ReportFilters; rows: 
     XLSX.utils.book_append_sheet(wb, ws, name);
   }
   if (!wb.Workbook) wb.Workbook = {};
-  wb.Workbook.CalcPr = { calcMode: "auto" };
+  (wb.Workbook as any).CalcPr = { calcMode: "auto" };
   XLSX.writeFile(wb, `Smart-DE-Reise-Bericht-${new Date().toISOString().slice(0, 10)}.xlsx`, { compression: true });
 }

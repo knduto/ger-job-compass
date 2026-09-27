@@ -20,7 +20,12 @@ export const Route = createFileRoute("/api/public/cron/daily-sync")({
           }
         }
         const result = await finishRun(supabaseAdmin, run.id);
-        return Response.json({ runId: run.id, ...result });
+        let language = { processed: 0, requested: 0, errors: [] as string[] };
+        if (result.status === "success") {
+          const { analyseLanguageBatch } = await import("@/lib/language-analysis.server");
+          language = await analyseLanguageBatch(supabaseAdmin, 20);
+        }
+        return Response.json({ runId: run.id, ...result, language });
       },
     },
   },

@@ -18,5 +18,5 @@ export const STAGES = [
 export const CONTRACT_LABELS: Record<string, string> = {
   UNBEFRISTET: "Unbefristet",
   BEFRISTET: "Befristet",
-  KEINE_ANGABE: "Keine Angabe",
+  KEINE_ANGABE: "Vertrag k. A.",
 };

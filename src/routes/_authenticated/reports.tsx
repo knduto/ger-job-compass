@@ -32,7 +32,12 @@ type WK = (typeof WEIGHTS)[number]["k"];
 
 function Reports() {
   const stats = useQuery({ queryKey: ["city_stats"], queryFn: fetchAllCityStats });
-  const share = useQuery({ queryKey: ["city_share"], queryFn: async () => (await must(supabase.from("city_employer_share").select("*").limit(5000))).data ?? [] });
+  const topCities = (stats.data ?? []).filter((c) => (c.active_jobs ?? 0) > 0).slice(0, 30).map((c) => c.city!);
+  const share = useQuery({
+    queryKey: ["city_share", topCities],
+    enabled: topCities.length > 0,
+    queryFn: async () => (await must(supabase.from("city_employer_share").select("*").in("city", topCities))).data ?? [],
+  });
   const [w, setW] = useState<Record<WK, number>>({ volume: 5, growth: 3, remote: 2, permanent: 2, diversity: 3 });
   const [selected, setSelected] = useState<string[]>([]);
   const [focus, setFocus] = useState<string | null>(null);
@@ -44,7 +49,7 @@ function Reports() {
     const mV = max((c) => c.active_jobs ?? 0), mG = max((c) => c.new_7d ?? 0);
     const totalW = Object.values(w).reduce((a, b) => a + b, 0) || 1;
     return top.map((c) => {
-      const conc = shareMap.get(c.city) ?? 0;
+      const conc = shareMap.get(c.city) ?? 100;
       const parts: Record<WK, number> = {
         volume: (c.active_jobs ?? 0) / mV,
         growth: (c.new_7d ?? 0) / mG,

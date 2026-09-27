@@ -1,159 +1,109 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Download, FileSpreadsheet, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader, fmt, fmtDate } from "@/components/AppShell";
+import { PageHeader, Stat, fmt } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { IT_BERUFSFELDER } from "@/lib/it-fields";
+import { getReportData, processLanguageBatch, type ReportFilters } from "@/lib/reports.functions";
+import { buildReportMetrics, employerKind, type ReportJob } from "@/lib/report-metrics";
 import { fetchAllCityStats, must } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/reports")({
-  head: () => ({
-    meta: [
-      { title: "Städte-Reports — Smart-DE-Reise" },
-      { name: "description", content: "Top-30 deutsche Städte für IT-Jobs: Volumen, Wachstum, Homeoffice, Arbeitgebervielfalt und gewichteter Score." },
-      { property: "og:title", content: "Städte-Reports — Smart-DE-Reise" },
-      { property: "og:description", content: "Datenbasiert die passende Stadt für die Chancenkarte wählen." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
-  component: Reports,
+  head: () => ({ meta: [
+    { title: "Arbeitsmarkt-Reports — Smart-DE-Reise" },
+    { name: "description", content: "Datenbasierte Stadt-, Sprach-, Arbeitgeber- und Marktberichte für IT-Jobs in Deutschland." },
+    { property: "og:title", content: "Arbeitsmarkt-Reports — Smart-DE-Reise" },
+    { property: "og:description", content: "Arbeitsagentur-Daten für die fundierte Wahl einer Stadt in Deutschland." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }), component: Reports,
 });
 
-const WEIGHTS = [
-  { k: "volume", label: "Stellenvolumen" },
-  { k: "growth", label: "Neue Stellen (7 Tage)" },
-  { k: "remote", label: "Homeoffice-Anteil" },
-  { k: "permanent", label: "Unbefristet-Anteil" },
-  { k: "diversity", label: "Arbeitgebervielfalt" },
-] as const;
-type WK = (typeof WEIGHTS)[number]["k"];
+const defaultFilters: ReportFilters = { city: "", region: "", field: "", keyword: "", status: "active", days: 0, contract: "", worktime: "", homeoffice: false, salary: false, language: "" };
+const defaultWeights = { volume: 5, growth: 3, remote: 2, permanent: 2, diversity: 3, language: 2 };
+const selectClass = "h-9 w-full rounded-md border bg-background px-2 text-sm";
+const weightLabels: Record<string, string> = { volume: "Stellenvolumen", growth: "Neue Stellen", remote: "Homeoffice", permanent: "Unbefristet", diversity: "Arbeitgebervielfalt", language: "Englisch zugänglich" };
 
 function Reports() {
-  const stats = useQuery({ queryKey: ["city_stats"], queryFn: fetchAllCityStats });
-  const topCities = (stats.data ?? []).filter((c) => (c.active_jobs ?? 0) > 0).slice(0, 30).map((c) => c.city!);
-  const share = useQuery({
-    queryKey: ["city_share", topCities],
-    enabled: topCities.length > 0,
-    queryFn: async () => (await must(supabase.from("city_employer_share").select("*").in("city", topCities))).data ?? [],
-  });
-  const [w, setW] = useState<Record<WK, number>>({ volume: 5, growth: 3, remote: 2, permanent: 2, diversity: 3 });
+  const reportFn = useServerFn(getReportData);
+  const analyseFn = useServerFn(processLanguageBatch);
+  const [filters, setFilters] = useState(defaultFilters);
+  const [weights, setWeights] = useState(defaultWeights);
   const [selected, setSelected] = useState<string[]>([]);
-  const [focus, setFocus] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const cities = useQuery({ queryKey: ["city_stats"], queryFn: fetchAllCityStats });
+  const keywords = useQuery({ queryKey: ["keywords-report"], queryFn: async () => (await must(supabase.from("search_keywords").select("term").eq("active", true).order("term"))).data ?? [] });
+  const report = useQuery({ queryKey: ["decision-report", filters], queryFn: () => reportFn({ data: filters }) });
+  const rows = (report.data?.rows ?? []) as ReportJob[];
+  const metrics = useMemo(() => buildReportMetrics(rows, weights), [rows, weights]);
+  const analysedPct = rows.length ? 100 * metrics.analysed / rows.length : 0;
+  const topCity = metrics.cities[0];
+  const newestCity = [...metrics.cities].sort((a, b) => b.new7 / Math.max(1, b.active) - a.new7 / Math.max(1, a.active))[0];
+  const salaryValues = rows.flatMap((r) => [r.salary_from, r.salary_to]).filter((n): n is number => n !== null);
+  const snapshotSeries = (report.data?.snapshots ?? []).filter((s) => !selected.length || selected.includes(s.city)).reduce<Record<string, any>>((acc, s) => {
+    const row = acc[s.snapshot_date] ?? { date: s.snapshot_date, active: 0, new7: 0, english: 0, analysed: 0 };
+    row.active += s.active_jobs; row.new7 += s.new_7d; row.english += s.english_accessible; row.analysed += s.analysed_jobs; acc[s.snapshot_date] = row; return acc;
+  }, {});
+  const trends = Object.values(snapshotSeries).map((r: any) => ({ ...r, englishPct: r.analysed ? +(100 * r.english / r.analysed).toFixed(1) : 0 }));
+  const update = <K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) => setFilters((current) => ({ ...current, [key]: value }));
+  const methodology = ["Quelle: Bundesagentur für Arbeit Jobsuche API; keine erfundenen oder extern ergänzten Stellen.", "A1–C2 wird nur vergeben, wenn das Niveau ausdrücklich in der Stellenbeschreibung steht.", "Vage Angaben wie „gute Deutschkenntnisse“ bleiben als „Deutsch erforderlich, Niveau unklar“ separat.", `Sprachabdeckung: ${metrics.analysed} von ${rows.length} gefilterten Stellen (${analysedPct.toFixed(1)} %).`, "Agenturhinweise beruhen ausschließlich auf klaren Begriffen im Arbeitgebernamen; alle anderen bleiben unklassifiziert.", "Historische Trends entstehen erst aus täglichen vollständigen Abrufen; ältere Punkte werden nicht rückwirkend erfunden."];
 
-  const rows = useMemo(() => {
-    const top = (stats.data ?? []).filter((c) => (c.active_jobs ?? 0) > 0).slice(0, 30);
-    const shareMap = new Map((share.data ?? []).map((s) => [s.city, Number(s.top_employer_pct ?? 0)]));
-    const max = (f: (c: (typeof top)[number]) => number) => Math.max(1, ...top.map(f));
-    const mV = max((c) => c.active_jobs ?? 0), mG = max((c) => c.new_7d ?? 0);
-    const totalW = Object.values(w).reduce((a, b) => a + b, 0) || 1;
-    return top.map((c) => {
-      const conc = shareMap.get(c.city) ?? 100;
-      const parts: Record<WK, number> = {
-        volume: (c.active_jobs ?? 0) / mV,
-        growth: (c.new_7d ?? 0) / mG,
-        remote: Number(c.remote_pct ?? 0) / 100,
-        permanent: Number(c.permanent_pct ?? 0) / 100,
-        diversity: 1 - conc / 100,
-      };
-      const score = (WEIGHTS.reduce((s, x) => s + parts[x.k] * w[x.k], 0) / totalW) * 100;
-      return { ...c, conc, score };
-    }).sort((a, b) => b.score - a.score);
-  }, [stats.data, share.data, w]);
+  async function pdf() {
+    if (!rows.length) return;
+    const { downloadReportPdf } = await import("@/lib/report-pdf");
+    await downloadReportPdf({ filters, total: rows.length, analysed: metrics.analysed, generatedAt: report.data?.generatedAt ?? new Date().toISOString(), cities: metrics.cities, language: metrics.language, topEmployers: metrics.employerCounts.slice(0, 15), methodology });
+  }
+  async function excel() {
+    if (!rows.length) return;
+    const { downloadReportXlsx } = await import("@/lib/report-xlsx");
+    await downloadReportXlsx({ filters, rows, cities: metrics.cities, language: metrics.language, employers: metrics.employerCounts, snapshots: report.data?.snapshots ?? [], generatedAt: report.data?.generatedAt ?? new Date().toISOString() });
+  }
 
-  const totalActive = rows.reduce((s, r) => s + (r.active_jobs ?? 0), 0);
-  const cmp = rows.filter((r) => selected.includes(r.city!));
-  const range = stats.data?.length ? `${fmtDate(stats.data.reduce((m, c) => (c.first_seen! < m ? c.first_seen! : m), stats.data[0]!.first_seen!))} – ${fmtDate(stats.data.reduce((m, c) => (c.last_seen! > m ? c.last_seen! : m), stats.data[0]!.last_seen!))}` : "–";
-
-  return (
-    <>
-      <PageHeader title="Städte-Reports" subtitle={`Top 30 Städte · Basis: ${fmt(totalActive)} aktive Stellen · Datenzeitraum ${range}`} />
-      <div className="mb-6 rounded-lg border bg-card p-4">
-        <div className="mb-3 text-sm font-semibold">Gewichtung für deinen Standort-Score</div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {WEIGHTS.map((x) => (
-            <div key={x.k} className="space-y-2 text-sm">
-              <div className="flex justify-between"><span>{x.label}</span><span className="font-mono">{w[x.k]}</span></div>
-              <Slider min={0} max={10} step={1} value={[w[x.k]]} onValueChange={([v]) => setW({ ...w, [x.k]: v })} />
-            </div>
-          ))}
-        </div>
+  return <>
+    <PageHeader title="Arbeitsmarkt-Reports" subtitle="Städte, Sprache und Marktchancen auf Basis realer Arbeitsagentur-Stellen." actions={<div className="flex gap-2"><Button variant="outline" disabled={!rows.length} onClick={pdf}><Download className="mr-2 h-4 w-4" />PDF</Button><Button disabled={!rows.length} onClick={excel}><FileSpreadsheet className="mr-2 h-4 w-4" />Excel</Button></div>} />
+    <section className="mb-6 border-y bg-card/40 py-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+        <Filter label="Stadt"><select className={selectClass} value={filters.city} onChange={(e) => update("city", e.target.value)}><option value="">Alle Städte</option>{(cities.data ?? []).map((c) => <option key={c.city} value={c.city ?? ""}>{c.city}</option>)}</select></Filter>
+        <Filter label="Bundesland"><input className={selectClass} value={filters.region} onChange={(e) => update("region", e.target.value)} placeholder="z.B. Bayern" /></Filter>
+        <Filter label="IT-Berufsfeld"><select className={selectClass} value={filters.field} onChange={(e) => update("field", e.target.value)}><option value="">Alle</option>{IT_BERUFSFELDER.map((v) => <option key={v}>{v}</option>)}</select></Filter>
+        <Filter label="Suchbegriff"><select className={selectClass} value={filters.keyword} onChange={(e) => update("keyword", e.target.value)}><option value="">Alle</option>{(keywords.data ?? []).map((k) => <option key={k.term}>{k.term}</option>)}</select></Filter>
+        <Filter label="Status"><select className={selectClass} value={filters.status} onChange={(e) => update("status", e.target.value as ReportFilters["status"])}><option value="active">Aktiv</option><option value="expired">Abgelaufen</option><option value="all">Alle</option></select></Filter>
+        <Filter label="Zeitraum"><select className={selectClass} value={filters.days} onChange={(e) => update("days", Number(e.target.value))}><option value={0}>Gesamter Zeitraum</option><option value={7}>7 Tage</option><option value={30}>30 Tage</option><option value={90}>90 Tage</option></select></Filter>
+        <Filter label="Vertrag"><select className={selectClass} value={filters.contract} onChange={(e) => update("contract", e.target.value)}><option value="">Alle</option><option value="UNBEFRISTET">Unbefristet</option><option value="BEFRISTET">Befristet</option></select></Filter>
+        <Filter label="Arbeitszeit"><select className={selectClass} value={filters.worktime} onChange={(e) => update("worktime", e.target.value as ReportFilters["worktime"])}><option value="">Alle</option><option value="full">Vollzeit</option><option value="part">Teilzeit</option></select></Filter>
+        <Filter label="Sprache"><select className={selectClass} value={filters.language} onChange={(e) => update("language", e.target.value)}><option value="">Alle</option><option value="required">Deutsch erforderlich</option><option value="english">Englisch zugänglich</option>{["A1","A2","B1","B2","C1","C2"].map((v) => <option key={v}>{v}</option>)}<option value="pending">Nicht analysiert</option></select></Filter>
+        <Toggle label="Homeoffice" checked={filters.homeoffice} onChange={(v) => update("homeoffice", v)} /><Toggle label="Mit Gehalt" checked={filters.salary} onChange={(v) => update("salary", v)} />
+        <Button variant="outline" className="self-end" onClick={() => setFilters(defaultFilters)}>Filter zurücksetzen</Button>
       </div>
-
-      {cmp.length > 1 && (
-        <div className="mb-6 h-80 rounded-lg border bg-card p-4">
-          <div className="mb-2 text-sm font-semibold">Vergleich ({cmp.length} Städte)</div>
-          <ResponsiveContainer width="100%" height="90%">
-            <BarChart data={cmp.map((c) => ({ city: c.city, "Aktive Stellen": c.active_jobs, "Neu 7T": c.new_7d, Arbeitgeber: c.employers }))}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="city" fontSize={11} /><YAxis fontSize={11} /><Tooltip /><Legend />
-              <Bar dataKey="Aktive Stellen" fill="var(--chart-2)" /><Bar dataKey="Neu 7T" fill="var(--chart-1)" /><Bar dataKey="Arbeitgeber" fill="var(--chart-4)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      <div className="overflow-x-auto rounded-lg border bg-card">
-        <table className="w-full text-sm">
-          <thead className="bg-muted text-left">
-            <tr>{["Vgl.", "#", "Stadt", "Score", "Aktiv", "Neu 7T", "Neu 30T", "Arbeitgeber", "Top-AG-Anteil", "Homeoffice", "Unbefristet", "Ø Jahresgehalt*"].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2">{h}</th>)}</tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.city} className={`cursor-pointer border-t hover:bg-muted/50 ${focus === r.city ? "bg-accent/15" : ""}`} onClick={() => setFocus(r.city)}>
-                <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={selected.includes(r.city!)} onChange={(e) => setSelected(e.target.checked ? [...selected, r.city!] : selected.filter((x) => x !== r.city))} />
-                </td>
-                <td className="px-3 py-2 font-mono text-muted-foreground">{i + 1}</td>
-                <td className="px-3 py-2 font-medium">{r.city}</td>
-                <td className="px-3 py-2"><div className="flex items-center gap-2"><div className="h-2 w-16 overflow-hidden rounded bg-muted"><div className="h-full bg-accent" style={{ width: `${r.score}%` }} /></div><span className="font-mono">{r.score.toFixed(0)}</span></div></td>
-                <td className="px-3 py-2 font-mono">{fmt(r.active_jobs)}</td>
-                <td className="px-3 py-2 font-mono">{fmt(r.new_7d)}</td>
-                <td className="px-3 py-2 font-mono">{fmt(r.new_30d)}</td>
-                <td className="px-3 py-2 font-mono">{fmt(r.employers)}</td>
-                <td className="px-3 py-2 font-mono">{r.conc.toFixed(0)} %</td>
-                <td className="px-3 py-2 font-mono">{r.remote_pct ?? 0} %</td>
-                <td className="px-3 py-2 font-mono">{r.permanent_pct ?? 0} %</td>
-                <td className="px-3 py-2 font-mono">{r.avg_salary ? `${fmt(r.avg_salary)} €` : "–"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {rows.length === 0 && <p className="p-4 text-sm text-muted-foreground">Noch keine Daten – starte zuerst einen Live-Abruf.</p>}
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">* Ø Jahresgehalt nur aus Anzeigen mit Jahresgehaltsangabe ({"<"} 25 % der Stellen typisch) – als Richtwert lesen. Top-AG-Anteil: Anteil des größten Arbeitgebers an den aktiven Stellen der Stadt (niedriger = breiter Markt).</p>
-      {focus && <CityDetail city={focus} />}
-    </>
-  );
+    </section>
+    {report.isLoading ? <p className="py-12 text-center text-muted-foreground">Bericht wird berechnet…</p> : report.error ? <p className="py-12 text-center text-destructive">{(report.error as Error).message}</p> : !rows.length ? <p className="py-12 text-center text-muted-foreground">Keine Stellen entsprechen diesen Filtern.</p> : <>
+      <section className="mb-8">
+        <h2 className="mb-3 text-lg font-semibold">Entscheidungsübersicht</h2>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><Stat label="Gefilterte Stellen" value={fmt(rows.length)} /><Stat label="Bestbewertete Stadt" value={topCity?.city ?? "–"} hint={topCity ? `Score ${topCity.score.toFixed(0)}` : undefined} /><Stat label="Frischester Markt" value={newestCity?.city ?? "–"} hint={newestCity ? `${newestCity.new7} in 7 Tagen` : undefined} /><Stat label="Gehaltsangaben" value={`${(100 * salaryValues.length / Math.max(1, rows.length * 2)).toFixed(1)} %`} /><Stat label="Sprachabdeckung" value={`${analysedPct.toFixed(1)} %`} hint={`${metrics.analysed} von ${rows.length}`} /></div>
+        {analysedPct < 50 && <p className="mt-3 border-l-2 border-warning pl-3 text-sm text-muted-foreground">Die Sprachauswertung ist noch nicht repräsentativ. Ergebnisse beziehen sich nur auf {metrics.analysed} analysierte Beschreibungen.</p>}
+      </section>
+      <section className="mb-8">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold">Deutsch & Zugänglichkeit</h2><p className="text-sm text-muted-foreground">Explizite Nachweise aus Stellenbeschreibungen, ohne geschätzte CEFR-Stufen.</p></div><Button variant="outline" disabled={processing} onClick={async () => { setProcessing(true); try { const r = await analyseFn({ data: { limit: 20 } }); toast.success(`${r.processed} Beschreibungen analysiert`); await report.refetch(); } catch (e) { toast.error((e as Error).message); } finally { setProcessing(false); } }}><RefreshCw className={`mr-2 h-4 w-4 ${processing ? "animate-spin" : ""}`} />Nächste 20 analysieren</Button></div>
+        <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]"><div className="overflow-hidden rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr><th className="px-3 py-2 text-left">Kategorie</th><th className="px-3 py-2 text-right">Stellen</th></tr></thead><tbody>{metrics.language.map((r) => <tr className="border-t" key={r.label}><td className="px-3 py-2">{r.label}</td><td className="px-3 py-2 text-right font-mono">{fmt(r.count)}</td></tr>)}</tbody></table></div><div className="h-72 rounded-lg border bg-card p-4"><ResponsiveContainer width="100%" height="100%"><BarChart data={metrics.cities.slice(0, 12)}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/><XAxis dataKey="city" fontSize={10}/><YAxis fontSize={10}/><Tooltip/><Bar dataKey="englishPct" name="Englisch zugänglich %" fill="var(--chart-2)"/></BarChart></ResponsiveContainer></div></div>
+      </section>
+      <section className="mb-8">
+        <h2 className="mb-3 text-lg font-semibold">Städteranking</h2><div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">{Object.entries(weights).map(([key, value]) => <div key={key} className="space-y-2 text-sm"><div className="flex justify-between"><span>{weightLabels[key]}</span><span className="font-mono">{value}</span></div><Slider min={0} max={10} value={[value]} onValueChange={([v]) => setWeights((w) => ({ ...w, [key]: v }))}/></div>)}</div>
+        <div className="overflow-x-auto rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr>{["Vgl.","#","Stadt","Score","Aktiv","Neu 7T","Arbeitgeber","Remote","Englisch*","Gehalt"].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2 text-left">{h}</th>)}</tr></thead><tbody>{metrics.cities.slice(0,30).map((r,i) => <tr key={r.city} className="border-t"><td className="px-3 py-2"><input type="checkbox" checked={selected.includes(r.city)} onChange={(e) => setSelected(e.target.checked ? [...selected,r.city] : selected.filter((v) => v !== r.city))}/></td><td className="px-3 py-2 text-muted-foreground">{i+1}</td><td className="px-3 py-2 font-medium">{r.city}</td><td className="px-3 py-2 font-mono text-accent">{r.score.toFixed(0)}</td><td className="px-3 py-2 font-mono">{r.active}</td><td className="px-3 py-2 font-mono">{r.new7}</td><td className="px-3 py-2 font-mono">{r.employers}</td><td className="px-3 py-2 font-mono">{r.remotePct.toFixed(1)} %</td><td className="px-3 py-2 font-mono">{r.languageCoverage ? `${r.englishPct.toFixed(1)} %` : "–"}</td><td className="px-3 py-2 font-mono">{r.salaryPct.toFixed(1)} %</td></tr>)}</tbody></table></div><p className="mt-2 text-xs text-muted-foreground">* Anteil nur innerhalb sprachlich analysierter Stellen der jeweiligen Stadt.</p>
+      </section>
+      <section className="mb-8"><h2 className="mb-3 text-lg font-semibold">Markt & Arbeitgeber</h2><div className="grid gap-4 lg:grid-cols-3"><Stat label="Größter Arbeitgeber" value={metrics.employerCounts[0]?.[0] ?? "–"} hint={`${fmt(metrics.employerCounts[0]?.[1])} Stellen`} /><Stat label="Agenturhinweis" value={`${(100 * metrics.agency / rows.length).toFixed(1)} %`} hint="Nur klare Namensmerkmale" /><Stat label="Gehaltsspanne" value={salaryValues.length ? `${fmt(Math.min(...salaryValues))}–${fmt(Math.max(...salaryValues))} €` : "–"} /></div><div className="mt-4 overflow-x-auto rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr><th className="px-3 py-2 text-left">Arbeitgeber</th><th className="px-3 py-2 text-left">Klassifikation</th><th className="px-3 py-2 text-right">Stellen</th></tr></thead><tbody>{metrics.employerCounts.slice(0,15).map(([name,n]) => <tr key={name} className="border-t"><td className="px-3 py-2">{name}</td><td className="px-3 py-2 text-muted-foreground">{employerKind(name)}</td><td className="px-3 py-2 text-right font-mono">{n}</td></tr>)}</tbody></table></div></section>
+      <section className="mb-8"><h2 className="mb-3 text-lg font-semibold">Stellen-Lebenszyklus</h2><div className="overflow-x-auto rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr>{["Stadt","Gesamt beobachtet","Abgelaufen","Ablaufquote","Ø beobachtete Tage"].map((h) => <th key={h} className="px-3 py-2 text-left">{h}</th>)}</tr></thead><tbody>{metrics.cities.slice(0,20).map((r) => <tr key={r.city} className="border-t"><td className="px-3 py-2 font-medium">{r.city}</td><td className="px-3 py-2">{r.total}</td><td className="px-3 py-2">{r.expired}</td><td className="px-3 py-2">{r.expiryPct.toFixed(1)} %</td><td className="px-3 py-2">{r.avgDays.toFixed(1)}</td></tr>)}</tbody></table></div></section>
+      <section className="mb-8"><h2 className="mb-3 text-lg font-semibold">Historische Trends</h2>{trends.length < 2 ? <p className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">Noch nicht genug Historie für einen belastbaren Trend. Jeder erfolgreiche tägliche Abruf ergänzt einen echten Datenpunkt.</p> : <div className="h-80 rounded-lg border bg-card p-4"><ResponsiveContainer width="100%" height="100%"><LineChart data={trends}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/><XAxis dataKey="date" fontSize={10}/><YAxis fontSize={10}/><Tooltip/><Legend/><Line type="monotone" dataKey="active" name="Aktiv" stroke="var(--chart-2)"/><Line type="monotone" dataKey="new7" name="Neu 7T" stroke="var(--chart-1)"/><Line type="monotone" dataKey="englishPct" name="Englisch %" stroke="var(--chart-4)"/></LineChart></ResponsiveContainer></div>}</section>
+      <section className="border-t pt-5"><h2 className="mb-2 text-lg font-semibold">Datenbasis & Methodik</h2><ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">{methodology.map((line) => <li key={line}>{line}</li>)}</ul></section>
+    </>}
+  </>;
 }
 
-function CityDetail({ city }: { city: string }) {
-  const res = useQuery({
-    queryKey: ["city-detail", city],
-    queryFn: async () => (await must(supabase.from("jobs").select("employer,beruf,first_seen").eq("city", city).eq("expired", false).limit(5000))).data ?? [],
-  });
-  const top = (key: "employer" | "beruf") =>
-    Object.entries((res.data ?? []).reduce<Record<string, number>>((m, j) => { const k = j[key] ?? "Unbekannt"; m[k] = (m[k] ?? 0) + 1; return m; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  const weekly = Object.entries((res.data ?? []).reduce<Record<string, number>>((m, j) => {
-    const d = new Date(j.first_seen); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const k = d.toISOString().slice(0, 10); m[k] = (m[k] ?? 0) + 1; return m;
-  }, {})).sort().map(([week, n]) => ({ week, n }));
-  return (
-    <div className="mt-8">
-      <h2 className="mb-4 text-2xl font-semibold">{city} im Detail <span className="text-sm font-normal text-muted-foreground">({fmt(res.data?.length)} aktive Stellen)</span></h2>
-      <div className="grid gap-4 lg:grid-cols-3">
-        {[["Top-Arbeitgeber", top("employer")], ["Top-Berufe", top("beruf")]].map(([t, list]) => (
-          <div key={t as string} className="rounded-lg border bg-card p-4 text-sm">
-            <div className="mb-2 font-semibold">{t as string}</div>
-            {(list as [string, number][]).map(([k, n]) => <div key={k} className="flex justify-between border-b py-1 last:border-0"><span className="truncate pr-2">{k}</span><span className="font-mono">{n}</span></div>)}
-          </div>
-        ))}
-        <div className="h-72 rounded-lg border bg-card p-4">
-          <div className="mb-2 text-sm font-semibold">Neu erfasste Stellen pro Woche</div>
-          <ResponsiveContainer width="100%" height="88%">
-            <BarChart data={weekly}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="week" fontSize={10} /><YAxis allowDecimals={false} fontSize={10} /><Tooltip /><Bar dataKey="n" name="Neu" fill="var(--chart-1)" /></BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
-  );
-}
+function Filter({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-1"><Label>{label}</Label>{children}</div>; }
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) { return <label className="flex h-9 items-center justify-between self-end rounded-md border px-3 text-sm">{label}<Switch checked={checked} onCheckedChange={onChange}/></label>; }

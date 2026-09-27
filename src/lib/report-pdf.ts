@@ -23,6 +23,7 @@ export async function downloadReportPdf(input: {
   doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Deutschanforderungen", margin, y);
   autoTable(doc, { startY: y + 4, head: [["Kategorie", "Stellen"]], body: input.language.map((r) => [r.label, r.count]), styles: { fontSize: 9 }, headStyles: { fillColor: [39, 47, 58] } });
   y = (doc as any).lastAutoTable.finalY + 10;
+  if (y > 220) { doc.addPage(); y = 18; }
   doc.setFont("helvetica", "bold"); doc.text("Top-Arbeitgeber", margin, y);
   autoTable(doc, { startY: y + 4, head: [["Arbeitgeber", "Stellen"]], body: input.topEmployers.slice(0, 15), styles: { fontSize: 9 }, headStyles: { fillColor: [39, 47, 58] } });
   doc.addPage(); doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text("Datenbasis und Methodik", margin, 20);

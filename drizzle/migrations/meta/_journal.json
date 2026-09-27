@@ -43,6 +43,13 @@
       "when": 1790482406002,
       "tag": "0005_create_tracked_cities",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790486216023,
+      "tag": "0006_scope_search_keywords_to_owner",
+      "breakpoints": true
     }
   ]
 }

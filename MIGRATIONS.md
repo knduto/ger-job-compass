@@ -1,0 +1,40 @@
+# Database migrations
+
+Migrations live in `drizzle/migrations/`. Hand-written rollbacks live in `drizzle/rollbacks/` and are **never run automatically** — each must be reviewed (and tested in a draft) before use. Seed data lives separately in `scripts/seed/`.
+
+## Compatibility criteria
+
+- **Yes (backward-compatible):** additive tables, views, functions, indexes or policies; new nullable columns or columns with a default; widening a type; a policy that does not hide rows the running app already reads.
+- **No (breaking):** dropping or renaming tables/columns; changing or narrowing a type; new `NOT NULL` without a default; new constraints existing rows or app writes may fail; replacing a policy or view so the app loses rows or columns it uses.
+- **Flagged:** ambiguous — the reason is written in the entry.
+- **N/A (baseline):** 0000, the initial schema.
+
+## Migration log
+
+| Date (UTC) | File | Purpose | Tables / columns affected | Backward-compatible | Rollback |
+|---|---|---|---|---|---|
+| 2026-09-27 | `0000_init_smart_de_reise.sql` | Initial schema, 28 seeded keywords | `search_keywords`, `jobs`, `job_details`, `sync_runs`, `applications` (+ `validate_application` trigger), views `city_stats`, `employer_stats` | N/A (baseline) | `0000_init_smart_de_reise.down.sql` (data loss) |
+| 2026-09-27 | `0001_city_stats_concentration.sql` | Top-employer concentration per city | new view `city_employer_share` (`city`, `top_employer_pct`) | Yes — new view only (uses `CREATE OR REPLACE` but the view did not exist before) | `0001_city_stats_concentration.down.sql` |
+| 2026-09-27 | `0002_city_stats_by_publication.sql` | "New" counts use agency publication date | view `city_stats`: `new_7d`, `new_30d` semantics | Flagged — view replaced; columns unchanged, but values of `new_7d`/`new_30d` changed meaning | `0002_city_stats_by_publication.down.sql` |
+| 2026-09-27 | `0003_cron_token_setter.sql` | Daily-sync token setter; enables `pg_cron`, `pg_net` | function `set_daily_sync_token(text)` (service_role only) | Yes | `0003_cron_token_setter.down.sql` |
+| 2026-09-27 | `0004_add_language_analysis_and_market_snapshots.sql` | Evidence-based language classification and daily snapshots | new tables `job_language_analysis`, `market_snapshots` + indexes | Yes | `0004_add_language_analysis_and_market_snapshots.down.sql` |
+| 2026-09-27 | `0005_create_tracked_cities.sql` | User-managed report cities | new table `tracked_cities` (per-user RLS) | Yes | `0005_create_tracked_cities.down.sql` |
+| 2026-09-27 | `0006_scope_search_keywords_to_owner.sql` | Scope keywords to their owner | `search_keywords.user_id` added, backfilled to first user, then `NOT NULL` + default `auth.uid()`; open policies replaced by owner policies | Flagged — `NOT NULL` set after backfill (safe with one user) and policy replacement hides other users' keywords from the browser | `0006_scope_search_keywords_to_owner.down.sql` (data loss) |
+
+### 0006 — App-side dependency
+
+Browser reads/writes of keywords go through the per-user rules and are correctly scoped. Server sync paths, however, still read **all users' keywords without an owner filter** (service role, pre-0006 pattern):
+
+- `src/routes/api/public/cron/daily-sync.ts` — daily scheduled sync
+- `src/lib/sync.functions.ts` — manual sync and city sync in keyword mode
+- `src/lib/sync.server.ts` — keyword count
+
+Impact today: none (single user). Tracked as **OPEN-001** in `roadmap.md`.
+
+## Process for new migrations
+
+1. **Summary + confirmation:** describe what changes, the compatibility verdict and data impact; get explicit approval before writing it.
+2. **Rollback file:** add a matching `drizzle/rollbacks/NNNN_name.down.sql` with `IF EXISTS` guards and the "never run automatically" header (plus a backup warning if it loses data).
+3. **Test in a draft first:** apply and verify the migration and the app in an isolated draft before accepting it into the live project.
+4. **No destructive auto-apply:** drops, renames, type changes and data rewrites are never applied automatically; prefer additive forms (add column + backfill).
+5. **Log it:** add a row to the table above.

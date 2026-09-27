@@ -9,50 +9,290 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedDataHealthRouteImport } from './routes/_authenticated/data-health'
+import { Route as AuthenticatedEmployersRouteImport } from './routes/_authenticated/employers'
+import { Route as AuthenticatedExploreRouteImport } from './routes/_authenticated/explore'
+import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedSyncRouteImport } from './routes/_authenticated/sync'
+import { Route as AuthenticatedEmployersNameRouteImport } from './routes/_authenticated/employers_.$name'
+import { Route as AuthenticatedJobsRefnrRouteImport } from './routes/_authenticated/jobs.$refnr'
+import { Route as ApiPublicCronDailySyncRouteImport } from './routes/api/public/cron/daily-sync'
 
-const IndexRoute = IndexRouteImport.update({
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDataHealthRoute = AuthenticatedDataHealthRouteImport.update({
+  id: '/data-health',
+  path: '/data-health',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEmployersRoute = AuthenticatedEmployersRouteImport.update({
+  id: '/employers',
+  path: '/employers',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedExploreRoute = AuthenticatedExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPipelineRoute = AuthenticatedPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSyncRoute = AuthenticatedSyncRouteImport.update({
+  id: '/sync',
+  path: '/sync',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEmployersNameRoute =
+  AuthenticatedEmployersNameRouteImport.update({
+    id: '/employers_/$name',
+    path: '/employers/$name',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedJobsRefnrRoute = AuthenticatedJobsRefnrRouteImport.update({
+  id: '/jobs/$refnr',
+  path: '/jobs/$refnr',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicCronDailySyncRoute = ApiPublicCronDailySyncRouteImport.update({
+  id: '/api/public/cron/daily-sync',
+  path: '/api/public/cron/daily-sync',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/auth': typeof AuthRoute
+  '/data-health': typeof AuthenticatedDataHealthRoute
+  '/employers': typeof AuthenticatedEmployersRoute
+  '/explore': typeof AuthenticatedExploreRoute
+  '/pipeline': typeof AuthenticatedPipelineRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/sync': typeof AuthenticatedSyncRoute
+  '/employers/$name': typeof AuthenticatedEmployersNameRoute
+  '/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
+  '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/data-health': typeof AuthenticatedDataHealthRoute
+  '/employers': typeof AuthenticatedEmployersRoute
+  '/explore': typeof AuthenticatedExploreRoute
+  '/pipeline': typeof AuthenticatedPipelineRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/sync': typeof AuthenticatedSyncRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/employers/$name': typeof AuthenticatedEmployersNameRoute
+  '/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
+  '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/data-health': typeof AuthenticatedDataHealthRoute
+  '/_authenticated/employers': typeof AuthenticatedEmployersRoute
+  '/_authenticated/explore': typeof AuthenticatedExploreRoute
+  '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/sync': typeof AuthenticatedSyncRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/employers_/$name': typeof AuthenticatedEmployersNameRoute
+  '/_authenticated/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
+  '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/data-health'
+    | '/employers'
+    | '/explore'
+    | '/pipeline'
+    | '/reports'
+    | '/sync'
+    | '/employers/$name'
+    | '/jobs/$refnr'
+    | '/api/public/cron/daily-sync'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/auth'
+    | '/data-health'
+    | '/employers'
+    | '/explore'
+    | '/pipeline'
+    | '/reports'
+    | '/sync'
+    | '/'
+    | '/employers/$name'
+    | '/jobs/$refnr'
+    | '/api/public/cron/daily-sync'
+  id:
+    | '__root__'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/data-health'
+    | '/_authenticated/employers'
+    | '/_authenticated/explore'
+    | '/_authenticated/pipeline'
+    | '/_authenticated/reports'
+    | '/_authenticated/sync'
+    | '/_authenticated/'
+    | '/_authenticated/employers_/$name'
+    | '/_authenticated/jobs/$refnr'
+    | '/api/public/cron/daily-sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ApiPublicCronDailySyncRoute: typeof ApiPublicCronDailySyncRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/data-health': {
+      id: '/_authenticated/data-health'
+      path: '/data-health'
+      fullPath: '/data-health'
+      preLoaderRoute: typeof AuthenticatedDataHealthRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/employers': {
+      id: '/_authenticated/employers'
+      path: '/employers'
+      fullPath: '/employers'
+      preLoaderRoute: typeof AuthenticatedEmployersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/explore': {
+      id: '/_authenticated/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof AuthenticatedExploreRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pipeline': {
+      id: '/_authenticated/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof AuthenticatedPipelineRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sync': {
+      id: '/_authenticated/sync'
+      path: '/sync'
+      fullPath: '/sync'
+      preLoaderRoute: typeof AuthenticatedSyncRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/employers_/$name': {
+      id: '/_authenticated/employers_/$name'
+      path: '/employers/$name'
+      fullPath: '/employers/$name'
+      preLoaderRoute: typeof AuthenticatedEmployersNameRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/jobs/$refnr': {
+      id: '/_authenticated/jobs/$refnr'
+      path: '/jobs/$refnr'
+      fullPath: '/jobs/$refnr'
+      preLoaderRoute: typeof AuthenticatedJobsRefnrRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/cron/daily-sync': {
+      id: '/api/public/cron/daily-sync'
+      path: '/api/public/cron/daily-sync'
+      fullPath: '/api/public/cron/daily-sync'
+      preLoaderRoute: typeof ApiPublicCronDailySyncRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDataHealthRoute: typeof AuthenticatedDataHealthRoute
+  AuthenticatedEmployersRoute: typeof AuthenticatedEmployersRoute
+  AuthenticatedExploreRoute: typeof AuthenticatedExploreRoute
+  AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedSyncRoute: typeof AuthenticatedSyncRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedEmployersNameRoute: typeof AuthenticatedEmployersNameRoute
+  AuthenticatedJobsRefnrRoute: typeof AuthenticatedJobsRefnrRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDataHealthRoute: AuthenticatedDataHealthRoute,
+  AuthenticatedEmployersRoute: AuthenticatedEmployersRoute,
+  AuthenticatedExploreRoute: AuthenticatedExploreRoute,
+  AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedSyncRoute: AuthenticatedSyncRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedEmployersNameRoute: AuthenticatedEmployersNameRoute,
+  AuthenticatedJobsRefnrRoute: AuthenticatedJobsRefnrRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ApiPublicCronDailySyncRoute: ApiPublicCronDailySyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

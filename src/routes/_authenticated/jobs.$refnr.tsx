@@ -1,0 +1,100 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { loadJobDetail } from "@/lib/sync.functions";
+import { must, saveToPipeline } from "@/lib/queries";
+import { PageHeader, Stat, fmtDate, fmtDateTime } from "@/components/AppShell";
+import { salaryText } from "@/components/JobRow";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { CONTRACT_LABELS } from "@/lib/it-fields";
+
+export const Route = createFileRoute("/_authenticated/jobs/$refnr")({
+  head: () => ({
+    meta: [
+      { title: "Stellendetails — Smart-DE-Reise" },
+      { name: "description", content: "Vollständige Stellenbeschreibung, Arbeitgeber und Quelle einer IT-Stelle." },
+      { property: "og:title", content: "Stellendetails — Smart-DE-Reise" },
+      { property: "og:description", content: "Details einer IT-Stelle aus der Bundesagentur für Arbeit." },
+      { property: "og:type", content: "article" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: JobDetail,
+});
+
+function JobDetail() {
+  const { refnr } = Route.useParams();
+  const qc = useQueryClient();
+  const detailFn = useServerFn(loadJobDetail);
+  const job = useQuery({
+    queryKey: ["job", refnr],
+    queryFn: async () => (await must(supabase.from("jobs").select("*").eq("refnr", refnr).maybeSingle())).data,
+  });
+  const detail = useQuery({ queryKey: ["job-detail", refnr], queryFn: () => detailFn({ data: { refnr } }), enabled: !!job.data });
+  const j = job.data;
+  if (job.isLoading) return <p className="text-muted-foreground">Lade…</p>;
+  if (!j) return <p>Stelle nicht gefunden. <Link to="/explore" className="underline">Zurück</Link></p>;
+  const baUrl = `https://www.arbeitsagentur.de/jobsuche/jobdetail/${encodeURIComponent(j.refnr)}`;
+  const raw: any = detail.data?.raw;
+  return (
+    <>
+      <PageHeader
+        title={j.title}
+        subtitle={`${j.employer ?? "Arbeitgeber unbekannt"} · ${j.city ?? "–"}${j.plz ? ` (${j.plz})` : ""}`}
+        actions={
+          <div className="flex gap-2">
+            <Button onClick={async () => { try { await saveToPipeline(j.refnr); toast.success("In Pipeline gespeichert"); qc.invalidateQueries({ queryKey: ["applications"] }); } catch (e) { toast.error((e as Error).message); } }}>+ Pipeline</Button>
+            <Button variant="outline" asChild><a href={j.external_url ?? baUrl} target="_blank" rel="noreferrer">Original-Anzeige</a></Button>
+          </div>
+        }
+      />
+      <div className="mb-6 flex flex-wrap gap-1">
+        {j.expired && <Badge variant="destructive">Abgelaufen</Badge>}
+        {j.berufsfelder.map((f) => <Badge key={f} variant="secondary">{f}</Badge>)}
+        {j.homeoffice && <Badge className="bg-success text-success-foreground">Homeoffice</Badge>}
+      </div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Stat label="Vertrag" value={<span className="text-base">{CONTRACT_LABELS[j.contract ?? ""] ?? j.contract ?? "–"}</span>} />
+        <Stat label="Gehalt" value={<span className="text-base">{salaryText(j) ?? "Keine Angabe"}</span>} />
+        <Stat label="Veröffentlicht" value={<span className="text-base">{fmtDate(j.published_from)}</span>} hint={`Eintritt ab ${fmtDate(j.entry_from)}`} />
+        <Stat label="Referenznummer" value={<span className="break-all text-sm">{j.refnr}</span>} hint={`erstmals gesehen ${fmtDate(j.first_seen)} · zuletzt ${fmtDate(j.last_seen)}`} />
+      </div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_300px]">
+        <article className="rounded-lg border bg-card p-6">
+          <h2 className="mb-3 font-semibold">Stellenbeschreibung</h2>
+          {detail.isLoading && <p className="text-sm text-muted-foreground">Lade Beschreibung von der Arbeitsagentur…</p>}
+          {detail.data?.error && <p className="mb-2 text-sm text-destructive">{detail.data.error}</p>}
+          {detail.data?.description ? (
+            <div className="prose prose-sm max-w-none space-y-2 [&_li]:ml-5 [&_li]:list-disc [&_strong]:font-semibold"><ReactMarkdown>{detail.data.description}</ReactMarkdown></div>
+          ) : !detail.isLoading && <p className="text-sm text-muted-foreground">Keine Beschreibung verfügbar – bitte Original-Anzeige öffnen.</p>}
+          {detail.data?.fetched_at && <p className="mt-4 text-xs text-muted-foreground">Abgerufen: {fmtDateTime(detail.data.fetched_at)}</p>}
+        </article>
+        <aside className="space-y-4 text-sm">
+          <div className="rounded-lg border bg-card p-4">
+            <h3 className="mb-2 font-semibold">Arbeitgeber</h3>
+            <p>{j.employer ?? "–"}</p>
+            {j.employer && <Link to="/employers/$name" params={{ name: j.employer }} className="mt-2 inline-block underline">Alle Stellen dieses Arbeitgebers</Link>}
+          </div>
+          {raw?.arbeitgeberAdresse && (
+            <div className="rounded-lg border bg-card p-4">
+              <h3 className="mb-2 font-semibold">Adresse</h3>
+              <p>{[raw.arbeitgeberAdresse.strasse, raw.arbeitgeberAdresse.plz, raw.arbeitgeberAdresse.ort].filter(Boolean).join(", ")}</p>
+            </div>
+          )}
+          <div className="rounded-lg border bg-card p-4">
+            <h3 className="mb-2 font-semibold">Berufe</h3>
+            <p>{j.alle_berufe.join(", ") || j.beruf || "–"}</p>
+          </div>
+          <div className="rounded-lg border bg-card p-4">
+            <h3 className="mb-2 font-semibold">Gefunden über</h3>
+            <p>{j.keywords.join(", ")}</p>
+          </div>
+        </aside>
+      </div>
+    </>
+  );
+}

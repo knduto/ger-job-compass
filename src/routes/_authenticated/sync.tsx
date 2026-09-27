@@ -4,17 +4,17 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { cityRunStep, finishCityRun, finishSyncRun, startCityRun, startSyncRun, syncOneKeyword } from "@/lib/sync.functions";
+import { abandonCityRun, cityRunStep, finishCityRun, finishSyncRun, startCityRun, startSyncRun, syncOneKeyword } from "@/lib/sync.functions";
 import { processLanguageBatch } from "@/lib/reports.functions";
 import { PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { must } from "@/lib/queries";
 import { IT_BERUFSFELDER } from "@/lib/it-fields";
 import { RunTable } from "@/components/RunTable";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/sync")({
   head: () => ({
@@ -39,7 +39,9 @@ function SyncPage() {
   const cityStart = useServerFn(startCityRun);
   const cityStep = useServerFn(cityRunStep);
   const cityFinish = useServerFn(finishCityRun);
+  const cityAbandon = useServerFn(abandonCityRun);
   const [cityStatus, setCityStatus] = useState<string | null>(null);
+  const [cityError, setCityError] = useState<string | null>(null);
   const [prog, setProg] = useState<{ i: number; n: number; kw: string; fetched: number; new: number } | null>(null);
   const [newTerm, setNewTerm] = useState("");
   const [city, setCity] = useState("");
@@ -87,10 +89,15 @@ function SyncPage() {
   async function runCity() {
     const c = city.trim();
     if (c.length < 2) { toast.error("Bitte eine Stadt eingeben."); return; }
+    const radiusKm = Number(cityRadius);
+    if (![0, 10, 25, 50, 100].includes(radiusKm)) { setCityError("Bitte einen gültigen Umkreis auswählen."); return; }
+    if (cityMode !== "all" && cityMode !== "keywords") { setCityError("Bitte einen gültigen Umfang auswählen."); return; }
     setCityBusy(true);
+    setCityError(null);
+    let runId: string | null = null;
     try {
-      const radiusKm = Number(cityRadius);
       const s = await cityStart({ data: { mode: cityMode } });
+      runId = s.runId;
       const t = { fetched: 0, new: 0, updated: 0, errors: 0 };
       const seenRefs = new Set<string>();
       const newRefs = new Set<string>();
@@ -108,7 +115,16 @@ function SyncPage() {
       toast.success(`Stadt-Abruf ${c} (${f.status}): ${t.fetched} gefunden, ${t.new} neu, ${t.updated} aktualisiert.`);
       qc.invalidateQueries();
     } catch (e) {
-      toast.error((e as Error).message);
+      const message = e instanceof Error && e.message ? e.message : "Unbekannter Fehler";
+      setCityError(`Der Stadt-Abruf wurde unterbrochen: ${message}`);
+      if (runId) {
+        try {
+          await cityAbandon({ data: { runId, reason: `Stadt-Abruf im Browser unterbrochen: ${message}` } });
+        } catch {
+          // Preserve the original error; history refresh below may still show the server-side state.
+        }
+      }
+      await qc.invalidateQueries({ queryKey: ["runs"] });
     } finally {
       setCityBusy(false);
       setCityStatus(null);
@@ -127,6 +143,7 @@ function SyncPage() {
         </div>
       )}
        <div className="grid gap-6">
+        <SectionErrorBoundary title="Stadt-Abruf ist vorübergehend nicht verfügbar">
         <div className="rounded-lg border bg-card p-4">
           <h2 className="mb-1 text-lg font-semibold">Stadt-Abruf (On-Demand)</h2>
           <p className="mb-3 text-sm text-muted-foreground">Holt Stellen gezielt für eine Stadt – unabhängig vom täglichen Vollabruf. Stadt-Abrufe markieren keine Stellen als abgelaufen.</p>
@@ -137,31 +154,32 @@ function SyncPage() {
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Umkreis</label>
-              <Select value={cityRadius} onValueChange={setCityRadius}>
-                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">Nur Stadt</SelectItem>
-                  <SelectItem value="10">10 km</SelectItem>
-                  <SelectItem value="25">25 km</SelectItem>
-                  <SelectItem value="50">50 km</SelectItem>
-                  <SelectItem value="100">100 km</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-1" role="group" aria-label="Umkreis auswählen">
+                {[{ value: "0", label: "Stadt" }, { value: "10", label: "10 km" }, { value: "25", label: "25 km" }, { value: "50", label: "50 km" }, { value: "100", label: "100 km" }].map((option) => (
+                  <Button key={option.value} type="button" size="sm" variant={cityRadius === option.value ? "default" : "outline"} aria-pressed={cityRadius === option.value} disabled={cityBusy} onClick={() => { setCityRadius(option.value); setCityError(null); }}>
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Umfang</label>
-              <Select value={cityMode} onValueChange={(v) => setCityMode(v as "all" | "keywords")}>
-                <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alle IT-Stellen der Stadt</SelectItem>
-                  <SelectItem value="keywords">Nur meine Suchbegriffe</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-1" role="group" aria-label="Umfang auswählen">
+                <Button type="button" size="sm" variant={cityMode === "all" ? "default" : "outline"} aria-pressed={cityMode === "all"} disabled={cityBusy} onClick={() => { setCityMode("all"); setCityError(null); }}>Alle IT-Stellen</Button>
+                <Button type="button" size="sm" variant={cityMode === "keywords" ? "default" : "outline"} aria-pressed={cityMode === "keywords"} disabled={cityBusy} onClick={() => { setCityMode("keywords"); setCityError(null); }}>Meine Suchbegriffe</Button>
+              </div>
             </div>
             <Button onClick={runCity} disabled={cityBusy || !!prog}>{cityBusy ? "Läuft…" : "Stadt abrufen"}</Button>
             {cityBusy && cityStatus && <span className="text-xs text-muted-foreground">{cityStatus}</span>}
           </div>
+          {cityError && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive p-3 text-sm" role="alert">
+              <span>{cityError}</span>
+              <Button type="button" size="sm" variant="outline" onClick={runCity} disabled={cityBusy}>Erneut versuchen</Button>
+            </div>
+          )}
         </div>
+        </SectionErrorBoundary>
         <div>
           <h2 className="mb-3 text-lg font-semibold">Letzte Abrufe</h2>
           <RunTable runs={runs.data ?? []} />

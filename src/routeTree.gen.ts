@@ -12,7 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedEmployersRouteImport } from './routes/_authenticated/employers'
 import { Route as AuthenticatedExploreRouteImport } from './routes/_authenticated/explore'
+import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
+import { Route as AuthenticatedEmployersNameRouteImport } from './routes/_authenticated/employers_.$name'
 import { Route as AuthenticatedJobsRefnrRouteImport } from './routes/_authenticated/jobs.$refnr'
 import { Route as ApiPublicCronDailySyncRouteImport } from './routes/api/public/cron/daily-sync'
 
@@ -30,11 +33,27 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEmployersRoute = AuthenticatedEmployersRouteImport.update({
+  id: '/employers',
+  path: '/employers',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedExploreRoute = AuthenticatedExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPipelineRoute = AuthenticatedPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEmployersNameRoute =
+  AuthenticatedEmployersNameRouteImport.update({
+    id: '/employers_/$name',
+    path: '/employers/$name',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedJobsRefnrRoute = AuthenticatedJobsRefnrRouteImport.update({
   id: '/jobs/$refnr',
   path: '/jobs/$refnr',
@@ -49,14 +68,20 @@ const ApiPublicCronDailySyncRoute = ApiPublicCronDailySyncRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/employers': typeof AuthenticatedEmployersRoute
   '/explore': typeof AuthenticatedExploreRoute
+  '/pipeline': typeof AuthenticatedPipelineRoute
+  '/employers/$name': typeof AuthenticatedEmployersNameRoute
   '/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
   '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/employers': typeof AuthenticatedEmployersRoute
   '/explore': typeof AuthenticatedExploreRoute
+  '/pipeline': typeof AuthenticatedPipelineRoute
   '/': typeof AuthenticatedIndexRoute
+  '/employers/$name': typeof AuthenticatedEmployersNameRoute
   '/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
   '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
@@ -64,24 +89,44 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/employers': typeof AuthenticatedEmployersRoute
   '/_authenticated/explore': typeof AuthenticatedExploreRoute
+  '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/employers_/$name': typeof AuthenticatedEmployersNameRoute
   '/_authenticated/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
   '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/explore' | '/jobs/$refnr' | '/api/public/cron/daily-sync'
+    | '/'
+    | '/auth'
+    | '/employers'
+    | '/explore'
+    | '/pipeline'
+    | '/employers/$name'
+    | '/jobs/$refnr'
+    | '/api/public/cron/daily-sync'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/auth' | '/explore' | '/' | '/jobs/$refnr' | '/api/public/cron/daily-sync'
+    | '/auth'
+    | '/employers'
+    | '/explore'
+    | '/pipeline'
+    | '/'
+    | '/employers/$name'
+    | '/jobs/$refnr'
+    | '/api/public/cron/daily-sync'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/employers'
     | '/_authenticated/explore'
+    | '/_authenticated/pipeline'
     | '/_authenticated/'
+    | '/_authenticated/employers_/$name'
     | '/_authenticated/jobs/$refnr'
     | '/api/public/cron/daily-sync'
   fileRoutesById: FileRoutesById
@@ -115,11 +160,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/employers': {
+      id: '/_authenticated/employers'
+      path: '/employers'
+      fullPath: '/employers'
+      preLoaderRoute: typeof AuthenticatedEmployersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/explore': {
       id: '/_authenticated/explore'
       path: '/explore'
       fullPath: '/explore'
       preLoaderRoute: typeof AuthenticatedExploreRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pipeline': {
+      id: '/_authenticated/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof AuthenticatedPipelineRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/employers_/$name': {
+      id: '/_authenticated/employers_/$name'
+      path: '/employers/$name'
+      fullPath: '/employers/$name'
+      preLoaderRoute: typeof AuthenticatedEmployersNameRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/jobs/$refnr': {
@@ -140,14 +206,20 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedEmployersRoute: typeof AuthenticatedEmployersRoute
   AuthenticatedExploreRoute: typeof AuthenticatedExploreRoute
+  AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedEmployersNameRoute: typeof AuthenticatedEmployersNameRoute
   AuthenticatedJobsRefnrRoute: typeof AuthenticatedJobsRefnrRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedEmployersRoute: AuthenticatedEmployersRoute,
   AuthenticatedExploreRoute: AuthenticatedExploreRoute,
+  AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedEmployersNameRoute: AuthenticatedEmployersNameRoute,
   AuthenticatedJobsRefnrRoute: AuthenticatedJobsRefnrRoute,
 }
 

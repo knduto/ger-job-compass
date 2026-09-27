@@ -269,6 +269,13 @@ export type Database = {
       }
     }
     Views: {
+      city_employer_share: {
+        Row: {
+          city: string | null
+          top_employer_pct: number | null
+        }
+        Relationships: []
+      }
       city_stats: {
         Row: {
           active_jobs: number | null

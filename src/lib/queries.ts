@@ -14,6 +14,21 @@ export async function fetchAllCityStats() {
   return data ?? [];
 }
 
+export async function fetchTrackedCities() {
+  const { data } = await must(supabase.from("tracked_cities").select("id,city").order("city"));
+  return data ?? [];
+}
+
+export async function addTrackedCity(city: string) {
+  const { error } = await supabase.from("tracked_cities").insert({ city });
+  if (error) throw new Error(error.message);
+}
+
+export async function removeTrackedCity(id: string) {
+  const { error } = await supabase.from("tracked_cities").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 export async function fetchMyApplications() {
   const { data } = await must(
     supabase.from("applications").select(`*, job:jobs(${JOB_LIST_COLS})`).order("updated_at", { ascending: false }),

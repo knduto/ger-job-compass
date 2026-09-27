@@ -36,6 +36,13 @@
       "when": 1790479859136,
       "tag": "0004_add_language_analysis_and_market_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790482406002,
+      "tag": "0005_create_tracked_cities",
+      "breakpoints": true
     }
   ]
 }

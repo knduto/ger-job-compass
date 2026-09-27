@@ -18,3 +18,5 @@
 - Job/sync tables are written only via service role on the server; the browser reads them through RLS (authenticated), and `applications` is scoped to `auth.uid()`.
 - City/employer aggregates are SQL views (`city_stats`, `employer_stats`, `city_employer_share`) with security_invoker; "new" counts use the agency's first-publication date, not our first_seen.
 - Daily cron token is stored in vault as `daily_sync_token` (set via `set_daily_sync_token`, service_role only) and matches `LOVABLE_CRON_SECRET`.
+
+- Language classifications and daily market snapshots are evidence-based derivatives of stored Arbeitsagentur listings; vague German wording never receives an inferred CEFR level.

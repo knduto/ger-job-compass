@@ -12,4 +12,4 @@
 - [x] Replace unstable area and scope popup controls
 - [x] Contain city-section render and request failures
 - [x] Mark interrupted city runs incomplete
-- [ ] Verify repeated selections and both signed-in request scopes
+- [x] Verify repeated selections and both signed-in request scopes

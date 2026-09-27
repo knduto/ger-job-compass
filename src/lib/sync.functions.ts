@@ -33,19 +33,13 @@ export const finishSyncRun = createServerFn({ method: "POST" })
   });
 
 /** On-demand fetch for one city: either all IT jobs there, or the active keywords limited to that city. */
-export const syncCityRun = createServerFn({ method: "POST" })
+// City fetch is split into start / step / finish so each server call stays short
+// (a single call looping over all keywords exceeds the request time limit).
+export const startCityRun = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({
-    city: z.string().trim().min(2).max(80),
-    radiusKm: z.number().int().min(0).max(200),
-    mode: z.enum(["all", "keywords"]),
-  }).parse(d))
+  .inputValidator((d) => z.object({ mode: z.enum(["all", "keywords"]) }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { syncKeyword, recordKeyword, finishRun } = await import("./sync.server");
-    const startedAt = new Date().toISOString();
-    const loc: { wo: string; umkreis?: number } = data.radiusKm ? { wo: data.city, umkreis: data.radiusKm } : { wo: data.city };
-
     let steps: (string | null)[];
     if (data.mode === "all") {
       steps = [null];
@@ -54,23 +48,41 @@ export const syncCityRun = createServerFn({ method: "POST" })
       steps = (kws ?? []).map((k) => k.term as string);
       if (!steps.length) throw new Error("Keine aktiven Suchbegriffe.");
     }
-
     const { data: run, error } = await supabaseAdmin.from("sync_runs").insert({ trigger: "city", keywords_total: steps.length }).select().single();
     if (error) throw new Error(error.message);
+    return { runId: run.id as string, steps, startedAt: new Date().toISOString() };
+  });
 
-    const totals = { fetched: 0, new: 0, updated: 0, errors: [] as string[] };
-    for (const kw of steps) {
-      try {
-        const c = await syncKeyword(supabaseAdmin, kw, startedAt, loc);
-        await recordKeyword(supabaseAdmin, run.id, c);
-        totals.fetched += c.fetched; totals.new += c.new; totals.updated += c.updated;
-        totals.errors.push(...c.errors);
-      } catch (e) {
-        totals.errors.push(`${kw ?? data.city}: ${(e as Error).message}`);
-      }
+export const cityRunStep = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    runId: z.string().uuid(),
+    keyword: z.string().max(120).nullable(),
+    city: z.string().trim().min(2).max(80),
+    radiusKm: z.number().int().min(0).max(200),
+    startedAt: z.string(),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { syncKeyword, recordKeyword } = await import("./sync.server");
+    const loc: { wo: string; umkreis?: number } = data.radiusKm ? { wo: data.city, umkreis: data.radiusKm } : { wo: data.city };
+    try {
+      const c = await syncKeyword(supabaseAdmin, data.keyword, data.startedAt, loc);
+      await recordKeyword(supabaseAdmin, data.runId, c);
+      return { fetched: c.fetched, new: c.new, updated: c.updated, errors: c.errors };
+    } catch (e) {
+      return { fetched: 0, new: 0, updated: 0, errors: [`${data.keyword ?? data.city}: ${(e as Error).message}`] };
     }
-    const res = await finishRun(supabaseAdmin, run.id);
-    return { ...totals, status: res.status };
+  });
+
+export const finishCityRun = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ runId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { finishRun } = await import("./sync.server");
+    const res = await finishRun(supabaseAdmin, data.runId);
+    return { status: res.status };
   });
 
 export const loadJobDetail = createServerFn({ method: "POST" })

@@ -307,7 +307,7 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      set_daily_sync_token: { Args: { t: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

@@ -7,6 +7,12 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
     return await next();
   } catch (error) {
+    // Server functions have their own serialized error protocol. Replacing
+    // their response with an HTML document makes useServerFn fail at the
+    // router boundary and takes down the current page.
+    if (next.context.handlerType === "serverFn") {
+      throw error;
+    }
     if (error != null && typeof error === "object" && "statusCode" in error) {
       throw error;
     }

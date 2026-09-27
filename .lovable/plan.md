@@ -1,6 +1,21 @@
-# German IT Job Intelligence Dashboard
+# Smart-DE-Reise — "Mein Weg bei der Jobsuche"
 
-A private, data-driven workspace for your Chancenkarte move: it pulls live IT job postings from the German Federal Employment Agency every day, builds a growing database, and turns it into city-by-city settlement reports.
+A private, data-driven workspace for your Chancenkarte move: it pulls live IT job postings from the German Federal Employment Agency every day, builds a growing database, and turns it into city-by-city settlement reports. The app name and tagline appear in the header, login page and page titles.
+
+## IT professional field (Berufsfeld) focus
+
+- The job agency returns a list of professional fields (`berufsfeld`) with counts alongside every search. The app reads these real values from the live responses instead of guessing names.
+- Default focus: the IT fields, e.g. "Informatik", "Softwareentwicklung und Programmierung", "IT-Netzwerktechnik, -Koordination, -Administration und -Organisation", "IT-Systemanalyse, -Anwendungsberatung und -Vertrieb", "Technische Informatik" and "Informations- und Telekommunikationstechnik" — the exact list is confirmed against the live data in step 2 before anything is stored.
+- The Explore filter shows these fields as selectable chips with counts; the daily fetch uses your keywords combined with the IT field set, so off-topic postings stay out.
+
+## Accuracy and compliance rules
+
+- Only real data from the job agency — no invented or sample postings anywhere.
+- Every posting keeps its reference number, source link, and first/last seen dates, so every number in a report traces back to real postings.
+- Duplicates are prevented by the reference number; expired postings are flagged, never silently deleted.
+- Report figures state the date range and posting count they are based on.
+- Requests to the agency are paced politely (small delays, limited page size, retries with backoff), and only the public job-search access the official app uses.
+- Your personal data (pipeline, notes) stays private behind your login.
 
 ## What you get
 

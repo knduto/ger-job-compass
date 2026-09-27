@@ -28,10 +28,18 @@ export function buildReportMetrics(rows: ReportJob[], weights: Record<string, nu
   });
   const maximum = (key: "active" | "new7" | "employers") => Math.max(1, ...rawCities.map((row) => row[key]));
   const totalWeight = Object.values(weights).reduce((sum, value) => sum + value, 0) || 1;
-  const cities = rawCities.map((row) => ({ ...row, score: 100 * (
-    row.active / maximum("active") * (weights["volume"] ?? 0) + row.new7 / maximum("new7") * (weights["growth"] ?? 0) + row.remotePct / 100 * (weights["remote"] ?? 0) +
-    row.permanentPct / 100 * (weights["permanent"] ?? 0) + row.employers / maximum("employers") * (weights["diversity"] ?? 0) + row.englishPct / 100 * (weights["language"] ?? 0)
-  ) / totalWeight })).sort((a, b) => b.score - a.score);
+  const cities = rawCities.map((row) => {
+    const contributions: Record<string, number> = {
+      volume: row.active / maximum("active") * (weights["volume"] ?? 0),
+      growth: row.new7 / maximum("new7") * (weights["growth"] ?? 0),
+      remote: row.remotePct / 100 * (weights["remote"] ?? 0),
+      permanent: row.permanentPct / 100 * (weights["permanent"] ?? 0),
+      diversity: row.employers / maximum("employers") * (weights["diversity"] ?? 0),
+      language: row.englishPct / 100 * (weights["language"] ?? 0),
+    };
+    const score = 100 * Object.values(contributions).reduce((sum, value) => sum + value, 0) / totalWeight;
+    return { ...row, contributions, score };
+  }).sort((a, b) => b.score - a.score);
   const employerCounts = Object.entries(rows.reduce<Record<string, number>>((map, job) => { if (job.employer) map[job.employer] = (map[job.employer] ?? 0) + 1; return map; }, {})).sort((a, b) => b[1] - a[1]);
   const categories: [string, (job: ReportJob) => boolean][] = [
     ["Explizites CEFR-Niveau", (j) => !!j.language?.cefr_level], ["Deutsch erforderlich, Niveau unklar", (j) => j.language?.classification === "german_unspecified"],

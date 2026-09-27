@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { must } from "@/lib/queries";
 import { IT_BERUFSFELDER } from "@/lib/it-fields";
-import { RunTable } from "./data-health";
+import { RunTable } from "@/components/RunTable";
 
 export const Route = createFileRoute("/_authenticated/sync")({
   head: () => ({

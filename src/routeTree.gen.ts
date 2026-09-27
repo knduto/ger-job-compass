@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedDataHealthRouteImport } from './routes/_authenticated/data-health'
 import { Route as AuthenticatedEmployersRouteImport } from './routes/_authenticated/employers'
 import { Route as AuthenticatedExploreRouteImport } from './routes/_authenticated/explore'
 import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedSyncRouteImport } from './routes/_authenticated/sync'
 import { Route as AuthenticatedEmployersNameRouteImport } from './routes/_authenticated/employers_.$name'
 import { Route as AuthenticatedJobsRefnrRouteImport } from './routes/_authenticated/jobs.$refnr'
 import { Route as ApiPublicCronDailySyncRouteImport } from './routes/api/public/cron/daily-sync'
@@ -32,6 +34,11 @@ const AuthRoute = AuthRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDataHealthRoute = AuthenticatedDataHealthRouteImport.update({
+  id: '/data-health',
+  path: '/data-health',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedEmployersRoute = AuthenticatedEmployersRouteImport.update({
@@ -54,6 +61,11 @@ const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSyncRoute = AuthenticatedSyncRouteImport.update({
+  id: '/sync',
+  path: '/sync',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedEmployersNameRoute =
   AuthenticatedEmployersNameRouteImport.update({
     id: '/employers_/$name',
@@ -74,20 +86,24 @@ const ApiPublicCronDailySyncRoute = ApiPublicCronDailySyncRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/data-health': typeof AuthenticatedDataHealthRoute
   '/employers': typeof AuthenticatedEmployersRoute
   '/explore': typeof AuthenticatedExploreRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/sync': typeof AuthenticatedSyncRoute
   '/employers/$name': typeof AuthenticatedEmployersNameRoute
   '/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
   '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/data-health': typeof AuthenticatedDataHealthRoute
   '/employers': typeof AuthenticatedEmployersRoute
   '/explore': typeof AuthenticatedExploreRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/sync': typeof AuthenticatedSyncRoute
   '/': typeof AuthenticatedIndexRoute
   '/employers/$name': typeof AuthenticatedEmployersNameRoute
   '/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
@@ -97,10 +113,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/data-health': typeof AuthenticatedDataHealthRoute
   '/_authenticated/employers': typeof AuthenticatedEmployersRoute
   '/_authenticated/explore': typeof AuthenticatedExploreRoute
   '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/sync': typeof AuthenticatedSyncRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/employers_/$name': typeof AuthenticatedEmployersNameRoute
   '/_authenticated/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
@@ -111,20 +129,24 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/data-health'
     | '/employers'
     | '/explore'
     | '/pipeline'
     | '/reports'
+    | '/sync'
     | '/employers/$name'
     | '/jobs/$refnr'
     | '/api/public/cron/daily-sync'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/data-health'
     | '/employers'
     | '/explore'
     | '/pipeline'
     | '/reports'
+    | '/sync'
     | '/'
     | '/employers/$name'
     | '/jobs/$refnr'
@@ -133,10 +155,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/data-health'
     | '/_authenticated/employers'
     | '/_authenticated/explore'
     | '/_authenticated/pipeline'
     | '/_authenticated/reports'
+    | '/_authenticated/sync'
     | '/_authenticated/'
     | '/_authenticated/employers_/$name'
     | '/_authenticated/jobs/$refnr'
@@ -172,6 +196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/data-health': {
+      id: '/_authenticated/data-health'
+      path: '/data-health'
+      fullPath: '/data-health'
+      preLoaderRoute: typeof AuthenticatedDataHealthRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/employers': {
       id: '/_authenticated/employers'
       path: '/employers'
@@ -200,6 +231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sync': {
+      id: '/_authenticated/sync'
+      path: '/sync'
+      fullPath: '/sync'
+      preLoaderRoute: typeof AuthenticatedSyncRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/employers_/$name': {
       id: '/_authenticated/employers_/$name'
       path: '/employers/$name'
@@ -225,20 +263,24 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDataHealthRoute: typeof AuthenticatedDataHealthRoute
   AuthenticatedEmployersRoute: typeof AuthenticatedEmployersRoute
   AuthenticatedExploreRoute: typeof AuthenticatedExploreRoute
   AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedSyncRoute: typeof AuthenticatedSyncRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedEmployersNameRoute: typeof AuthenticatedEmployersNameRoute
   AuthenticatedJobsRefnrRoute: typeof AuthenticatedJobsRefnrRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDataHealthRoute: AuthenticatedDataHealthRoute,
   AuthenticatedEmployersRoute: AuthenticatedEmployersRoute,
   AuthenticatedExploreRoute: AuthenticatedExploreRoute,
   AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedSyncRoute: AuthenticatedSyncRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedEmployersNameRoute: AuthenticatedEmployersNameRoute,
   AuthenticatedJobsRefnrRoute: AuthenticatedJobsRefnrRoute,

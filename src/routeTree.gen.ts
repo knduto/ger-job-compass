@@ -9,8 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ApiPublicCronDailySyncRouteImport } from './routes/api/public/cron/daily-sync'
 
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronDailySyncRoute = ApiPublicCronDailySyncRouteImport.update({
   id: '/api/public/cron/daily-sync',
   path: '/api/public/cron/daily-sync',
@@ -18,29 +29,51 @@ const ApiPublicCronDailySyncRoute = ApiPublicCronDailySyncRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof AuthenticatedRouteRoute
+  '/auth': typeof AuthRoute
   '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof AuthenticatedRouteRoute
+  '/auth': typeof AuthRoute
   '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/_authenticated': typeof AuthenticatedRouteRoute
+  '/auth': typeof AuthRoute
   '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/api/public/cron/daily-sync'
+  fullPaths: '/' | '/auth' | '/api/public/cron/daily-sync'
   fileRoutesByTo: FileRoutesByTo
-  to: '/api/public/cron/daily-sync'
-  id: '__root__' | '/api/public/cron/daily-sync'
+  to: '/' | '/auth' | '/api/public/cron/daily-sync'
+  id: '__root__' | '/_authenticated' | '/auth' | '/api/public/cron/daily-sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRoute
+  AuthRoute: typeof AuthRoute
   ApiPublicCronDailySyncRoute: typeof ApiPublicCronDailySyncRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/daily-sync': {
       id: '/api/public/cron/daily-sync'
       path: '/api/public/cron/daily-sync'
@@ -52,6 +85,8 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  AuthenticatedRouteRoute: AuthenticatedRouteRoute,
+  AuthRoute: AuthRoute,
   ApiPublicCronDailySyncRoute: ApiPublicCronDailySyncRoute,
 }
 export const routeTree = rootRouteImport

@@ -15,6 +15,13 @@
       "when": 1790477343792,
       "tag": "0001_city_stats_concentration",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790477678029,
+      "tag": "0002_city_stats_by_publication",
+      "breakpoints": true
     }
   ]
 }

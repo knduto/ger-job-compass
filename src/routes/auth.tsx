@@ -71,19 +71,28 @@ function AuthPage() {
       <div className="flex items-center justify-center p-6">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5">
           <div className="lg:hidden"><Brand dark /></div>
-          <h1 className="text-2xl font-semibold">{mode === "in" ? "Anmelden" : "Konto erstellen"}</h1>
+          <h1 className="text-2xl font-semibold">{mode === "in" ? "Anmelden" : mode === "up" ? "Konto erstellen" : "Passwort zurücksetzen"}</h1>
           <div className="space-y-2">
             <Label htmlFor="email">E-Mail</Label>
             <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="pw">Passwort</Label>
-            <Input id="pw" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+          {mode !== "reset" && (
+            <div className="space-y-2">
+              <Label htmlFor="pw">Passwort</Label>
+              <Input id="pw" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+          )}
+          <Button type="submit" className="w-full" disabled={busy}>{busy ? "…" : mode === "in" ? "Anmelden" : mode === "up" ? "Registrieren" : "Link zum Zurücksetzen senden"}</Button>
+          <div className="flex flex-col gap-2">
+            <button type="button" className="text-sm text-muted-foreground underline" onClick={() => setMode(mode === "in" ? "up" : "in")}>
+              {mode === "in" ? "Noch kein Konto? Registrieren" : "Schon registriert? Anmelden"}
+            </button>
+            {mode === "in" && (
+              <button type="button" className="text-sm text-muted-foreground underline" onClick={() => setMode("reset")}>
+                Passwort vergessen?
+              </button>
+            )}
           </div>
-          <Button type="submit" className="w-full" disabled={busy}>{busy ? "…" : mode === "in" ? "Anmelden" : "Registrieren"}</Button>
-          <button type="button" className="text-sm text-muted-foreground underline" onClick={() => setMode(mode === "in" ? "up" : "in")}>
-            {mode === "in" ? "Noch kein Konto? Registrieren" : "Schon registriert? Anmelden"}
-          </button>
         </form>
       </div>
     </div>

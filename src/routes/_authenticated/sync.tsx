@@ -81,6 +81,22 @@ function SyncPage() {
     setNewTerm(""); qc.invalidateQueries({ queryKey: ["keywords"] });
   }
 
+  async function runCity() {
+    const c = city.trim();
+    if (c.length < 2) { toast.error("Bitte eine Stadt eingeben."); return; }
+    setCityBusy(true);
+    try {
+      const r = await citySync({ data: { city: c, radiusKm: Number(cityRadius), mode: cityMode } });
+      if (r.errors.length) toast.warning(`${r.errors.length} Fehler – Details im Abruf-Protokoll.`);
+      toast.success(`Stadt-Abruf ${c} (${r.status}): ${r.fetched} gefunden, ${r.new} neu, ${r.updated} aktualisiert.`);
+      qc.invalidateQueries();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setCityBusy(false);
+    }
+  }
+
   return (
     <>
       <PageHeader title="Live-Abruf" subtitle="Holt aktuelle Stellen der Bundesagentur für Arbeit – automatisch täglich um 05:00 Uhr (UTC) und jederzeit manuell."
@@ -93,6 +109,40 @@ function SyncPage() {
         </div>
       )}
        <div className="grid gap-6">
+        <div className="rounded-lg border bg-card p-4">
+          <h2 className="mb-1 text-lg font-semibold">Stadt-Abruf (On-Demand)</h2>
+          <p className="mb-3 text-sm text-muted-foreground">Holt Stellen gezielt für eine Stadt – unabhängig vom täglichen Vollabruf. Stadt-Abrufe markieren keine Stellen als abgelaufen.</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-48 flex-1">
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Stadt</label>
+              <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="z. B. Leipzig" onKeyDown={(e) => e.key === "Enter" && runCity()} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Umkreis</label>
+              <Select value={cityRadius} onValueChange={setCityRadius}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Nur Stadt</SelectItem>
+                  <SelectItem value="10">10 km</SelectItem>
+                  <SelectItem value="25">25 km</SelectItem>
+                  <SelectItem value="50">50 km</SelectItem>
+                  <SelectItem value="100">100 km</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Umfang</label>
+              <Select value={cityMode} onValueChange={(v) => setCityMode(v as "all" | "keywords")}>
+                <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle IT-Stellen der Stadt</SelectItem>
+                  <SelectItem value="keywords">Nur meine Suchbegriffe</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={runCity} disabled={cityBusy || !!prog}>{cityBusy ? "Läuft…" : "Stadt abrufen"}</Button>
+          </div>
+        </div>
         <div>
           <h2 className="mb-3 text-lg font-semibold">Letzte Abrufe</h2>
           <RunTable runs={runs.data ?? []} />

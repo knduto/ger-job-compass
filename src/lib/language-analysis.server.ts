@@ -22,14 +22,15 @@ export function classifyLanguage(description: string | null | undefined) {
   const optional = /(?:deutsch|german).{0,45}(?:wünschenswert|von vorteil|nice[- ]to[- ]have|preferred|optional)|(?:wünschenswert|von vorteil|preferred).{0,45}(?:deutsch|german)/i.test(text);
   const englishAccessible = /(?:arbeitssprache|working language|team language).{0,35}(?:englisch|english)|(?:englisch|english).{0,35}(?:ausreichend|only|ohne deutsch|no german)/i.test(text);
   const germanMention = /deutsch(?:kenntnisse)?|german/i.test(text);
+  const germanNotRequired = /(?:kein(?:e)?|ohne|no)\s+(?:deutsch(?:kenntnisse)?|german)|(?:deutsch(?:kenntnisse)?|german).{0,20}(?:nicht erforderlich|not required)/i.test(text);
   if (germanMention && evidence.length === 0) addMatches(/.{0,45}(?:deutsch(?:kenntnisse)?|german).{0,75}/gi);
 
-  const classification = cefr ? "cefr" : optional ? "german_optional" : germanMention ? "german_unspecified" : englishAccessible ? "english_accessible" : "unknown";
+  const classification = cefr ? "cefr" : germanNotRequired || englishAccessible ? "english_accessible" : optional ? "german_optional" : germanMention ? "german_unspecified" : "unknown";
   return {
     classification,
     cefr_level: cefr,
-    german_required: cefr ? true : germanMention ? !optional : null,
-    english_accessible: englishAccessible,
+    german_required: cefr ? true : germanNotRequired ? false : germanMention ? !optional : null,
+    english_accessible: englishAccessible || germanNotRequired,
     evidence: [...new Set(evidence)],
     extraction_version: 1,
     analysed_at: new Date().toISOString(),

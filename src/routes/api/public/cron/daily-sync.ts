@@ -19,12 +19,12 @@ export const Route = createFileRoute("/api/public/cron/daily-sync")({
             await recordKeyword(supabaseAdmin, run.id, { requests: 0, fetched: 0, skipped: 0, new: 0, updated: 0, errors: [`${k.term}: ${(e as Error).message}`] });
           }
         }
-        const result = await finishRun(supabaseAdmin, run.id);
         let language = { processed: 0, requested: 0, errors: [] as string[] };
-        if (result.status === "success") {
+        if ((kws ?? []).length > 0) {
           const { analyseLanguageBatch } = await import("@/lib/language-analysis.server");
-          language = await analyseLanguageBatch(supabaseAdmin, 20);
+          language = await analyseLanguageBatch(supabaseAdmin, 50);
         }
+        const result = await finishRun(supabaseAdmin, run.id);
         return Response.json({ runId: run.id, ...result, language });
       },
     },

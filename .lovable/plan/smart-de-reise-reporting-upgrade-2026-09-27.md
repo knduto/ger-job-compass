@@ -1,7 +1,7 @@
 # Smart-DE-Reise reporting upgrade
 
 ## Goal
-Turn the existing city report into a practical settlement and job-market decision tool, using only real Arbeitsagentur data. Add transparent German-language analysis, richer market insights, useful filters, and a downloadable full PDF report. Also correct the Live-Abruf layout so the search-term panel is positioned comfortably without unnecessary browser scrolling.
+Turn the existing city report into a practical settlement and job-market decision tool, using only real Arbeitsagentur data. Add transparent German-language analysis, richer market insights, useful filters, and downloadable PDF and Excel reports. Also correct the Live-Abruf layout so the search-term panel is positioned comfortably without unnecessary browser scrolling.
 
 ## What will be built
 
@@ -39,11 +39,13 @@ Filters will update all report sections and the PDF so the screen and downloaded
 - **Trends:** daily snapshots for active jobs, new postings, expiries, language mix, and selected city indicators. Explain when history is too short for a meaningful trend.
 - **Methodology and data health:** Arbeitsagentur source, refresh time, applied filters, sample size, description coverage, and limitations.
 
-### 4. Full PDF download
-- Add a “Download PDF” action to Reports.
-- Generate a polished German-language report containing the current filters, headline findings, charts/tables, timestamp, data period, sample sizes, source, and methodology.
-- Use sensible page breaks and concise Top-N tables so the document remains readable.
-- Disable download with a clear reason when no rows match the filters.
+### 4. PDF and Excel downloads
+- Add “Download PDF” and “Download Excel” actions to Reports.
+- Generate a polished German-language PDF containing the current filters, headline findings, charts/tables, timestamp, data period, sample sizes, source, and methodology.
+- Generate an Excel workbook with separate sheets for overview, cities, language, employers, lifecycle, trends, and filtered source data.
+- Use the same filtered population and centralized calculations for both downloads.
+- Use sensible page breaks and concise Top-N tables so the PDF remains readable.
+- Disable downloads with a clear reason when no rows match the filters.
 
 ### 5. Data history and safe processing
 - Add additive reporting tables for language analysis and daily aggregate snapshots, with signed-in read access and server-only writes.
@@ -57,7 +59,7 @@ Filters will update all report sections and the PDF so the screen and downloaded
 - Keep the active count, add field, switches, and delete controls visible and usable at the current preview size.
 
 ## Technical details
-- Use authenticated server functions for description processing, report queries, and PDF data preparation.
+- Use authenticated server functions for description processing, report queries, and PDF and Excel data preparation.
 - Add schema changes through one additive database migration with explicit grants and row-level policies.
 - Store evidence-based classification fields and extraction version so future rule improvements can be re-run safely.
 - Create daily city/market snapshot rows only after a completed sync; do not fabricate historical points from current totals.
@@ -68,8 +70,9 @@ Filters will update all report sections and the PDF so the screen and downloaded
 - Test language rules against explicit CEFR phrases, vague German wording, English-only wording, negations, and missing descriptions.
 - Confirm every percentage exposes its denominator and incomplete coverage is visible.
 - Compare sampled classifications with the original listing text.
-- Verify report filters update all sections and the PDF uses the identical filter set.
+- Verify report filters update all sections and both downloads use the identical filter set.
 - Inspect every generated PDF page for clipped text, broken tables, missing charts, and incorrect page order.
+- Recalculate and inspect the Excel workbook for formula errors, sheet structure, formatting, and complete filtered data.
 - Check the Live-Abruf page at the current viewport and on mobile, ensuring the search-term controls do not force awkward page scrolling.
 - Run the authenticated report, download, language-processing, and Live-Abruf flows end to end.
 

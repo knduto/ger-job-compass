@@ -53,12 +53,12 @@ function isGermany(j: any) {
 }
 
 /** Sync one keyword (or all IT jobs when keyword is null) across all IT professional fields. Returns counters. */
-export async function syncKeyword(admin: Admin, keyword: string | null, runStartedAt: string, loc?: { wo: string; umkreis?: number }) {
+export async function syncKeyword(admin: Admin, keyword: string | null, runStartedAt: string, loc?: { wo: string; umkreis?: number }, fields = IT_BERUFSFELDER) {
   const c = { requests: 0, fetched: 0, skipped: 0, new: 0, updated: 0, errors: [] as string[] };
   const collected = new Map<string, ReturnType<typeof mapJob>>();
   const label = keyword ?? `stadt:${loc?.wo ?? ""}`;
 
-  for (const field of IT_BERUFSFELDER) {
+  for (const field of fields) {
     for (let page = 1; page <= MAX_PAGES; page++) {
       try {
         const params: Parameters<typeof searchJobs>[0] = { berufsfeld: field, angebotsart: 1, page, size: PAGE_SIZE };
@@ -83,7 +83,7 @@ export async function syncKeyword(admin: Admin, keyword: string | null, runStart
     }
   }
   c.fetched = collected.size;
-  if (collected.size === 0) return c;
+  if (collected.size === 0) return { ...c, refs: [] as string[], newRefs: [] as string[] };
 
   const refs = [...collected.keys()];
   const existing = new Map<string, { berufsfelder: string[]; keywords: string[]; first_seen: string }>();
@@ -114,7 +114,7 @@ export async function syncKeyword(admin: Admin, keyword: string | null, runStart
     const { error } = await admin.from("jobs").upsert(rows.slice(i, i + 200), { onConflict: "refnr" });
     if (error) throw new Error(error.message);
   }
-  return c;
+  return { ...c, refs, newRefs: rows.filter((row) => !existing.has(row.refnr)).map((row) => row.refnr) };
 }
 
 export async function startRun(admin: Admin, trigger: string) {

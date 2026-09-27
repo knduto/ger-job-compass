@@ -36,8 +36,13 @@ function SyncPage() {
   const one = useServerFn(syncOneKeyword);
   const finish = useServerFn(finishSyncRun);
   const analyse = useServerFn(processLanguageBatch);
+  const citySync = useServerFn(syncCityRun);
   const [prog, setProg] = useState<{ i: number; n: number; kw: string; fetched: number; new: number } | null>(null);
   const [newTerm, setNewTerm] = useState("");
+  const [city, setCity] = useState("");
+  const [cityRadius, setCityRadius] = useState("25");
+  const [cityMode, setCityMode] = useState<"all" | "keywords">("all");
+  const [cityBusy, setCityBusy] = useState(false);
 
   const kws = useQuery({ queryKey: ["keywords"], queryFn: async () => (await must(supabase.from("search_keywords").select("*").order("term"))).data ?? [] });
   const runs = useQuery({ queryKey: ["runs"], queryFn: async () => (await must(supabase.from("sync_runs").select("*").order("started_at", { ascending: false }).limit(15))).data ?? [], refetchInterval: prog ? 5000 : false });

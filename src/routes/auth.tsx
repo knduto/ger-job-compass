@@ -35,11 +35,16 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         navigate({ to: "/" });
-      } else {
+      } else if (mode === "up") {
         const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
         if (error) throw error;
         if (data.session) navigate({ to: "/" });
         else toast.success("Bitte bestätige deine E-Mail-Adresse über den Link in deinem Postfach.");
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
+        if (error) throw error;
+        toast.success("Wenn ein Konto existiert, wurde ein Link zum Zurücksetzen an deine E-Mail gesendet.");
+        setMode("in");
       }
     } catch (err) {
       toast.error((err as Error).message);

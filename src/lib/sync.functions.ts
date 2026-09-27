@@ -32,6 +32,47 @@ export const finishSyncRun = createServerFn({ method: "POST" })
     return finishRun(supabaseAdmin, data.runId);
   });
 
+/** On-demand fetch for one city: either all IT jobs there, or the active keywords limited to that city. */
+export const syncCityRun = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    city: z.string().trim().min(2).max(80),
+    radiusKm: z.number().int().min(0).max(200),
+    mode: z.enum(["all", "keywords"]),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { syncKeyword, recordKeyword, finishRun } = await import("./sync.server");
+    const startedAt = new Date().toISOString();
+    const loc: { wo: string; umkreis?: number } = data.radiusKm ? { wo: data.city, umkreis: data.radiusKm } : { wo: data.city };
+
+    let steps: (string | null)[];
+    if (data.mode === "all") {
+      steps = [null];
+    } else {
+      const { data: kws } = await supabaseAdmin.from("search_keywords").select("term").eq("active", true).order("term");
+      steps = (kws ?? []).map((k) => k.term as string);
+      if (!steps.length) throw new Error("Keine aktiven Suchbegriffe.");
+    }
+
+    const { data: run, error } = await supabaseAdmin.from("sync_runs").insert({ trigger: "city", keywords_total: steps.length }).select().single();
+    if (error) throw new Error(error.message);
+
+    const totals = { fetched: 0, new: 0, updated: 0, errors: [] as string[] };
+    for (const kw of steps) {
+      try {
+        const c = await syncKeyword(supabaseAdmin, kw, startedAt, loc);
+        await recordKeyword(supabaseAdmin, run.id, c);
+        totals.fetched += c.fetched; totals.new += c.new; totals.updated += c.updated;
+        totals.errors.push(...c.errors);
+      } catch (e) {
+        totals.errors.push(`${kw ?? data.city}: ${(e as Error).message}`);
+      }
+    }
+    const res = await finishRun(supabaseAdmin, run.id);
+    return { ...totals, status: res.status };
+  });
+
 export const loadJobDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ refnr: z.string().min(3).max(120), refresh: z.boolean().optional() }).parse(d))

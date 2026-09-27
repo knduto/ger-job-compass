@@ -22,7 +22,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"in" | "up">("in");
+  const [mode, setMode] = useState<"in" | "up" | "reset">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -35,11 +35,16 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         navigate({ to: "/" });
-      } else {
+      } else if (mode === "up") {
         const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
         if (error) throw error;
         if (data.session) navigate({ to: "/" });
         else toast.success("Bitte bestätige deine E-Mail-Adresse über den Link in deinem Postfach.");
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
+        if (error) throw error;
+        toast.success("Wenn ein Konto existiert, wurde ein Link zum Zurücksetzen an deine E-Mail gesendet.");
+        setMode("in");
       }
     } catch (err) {
       toast.error((err as Error).message);
@@ -66,19 +71,28 @@ function AuthPage() {
       <div className="flex items-center justify-center p-6">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5">
           <div className="lg:hidden"><Brand dark /></div>
-          <h1 className="text-2xl font-semibold">{mode === "in" ? "Anmelden" : "Konto erstellen"}</h1>
+          <h1 className="text-2xl font-semibold">{mode === "in" ? "Anmelden" : mode === "up" ? "Konto erstellen" : "Passwort zurücksetzen"}</h1>
           <div className="space-y-2">
             <Label htmlFor="email">E-Mail</Label>
             <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="pw">Passwort</Label>
-            <Input id="pw" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+          {mode !== "reset" && (
+            <div className="space-y-2">
+              <Label htmlFor="pw">Passwort</Label>
+              <Input id="pw" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+          )}
+          <Button type="submit" className="w-full" disabled={busy}>{busy ? "…" : mode === "in" ? "Anmelden" : mode === "up" ? "Registrieren" : "Link zum Zurücksetzen senden"}</Button>
+          <div className="flex flex-col gap-2">
+            <button type="button" className="text-sm text-muted-foreground underline" onClick={() => setMode(mode === "in" ? "up" : "in")}>
+              {mode === "in" ? "Noch kein Konto? Registrieren" : "Schon registriert? Anmelden"}
+            </button>
+            {mode === "in" && (
+              <button type="button" className="text-sm text-muted-foreground underline" onClick={() => setMode("reset")}>
+                Passwort vergessen?
+              </button>
+            )}
           </div>
-          <Button type="submit" className="w-full" disabled={busy}>{busy ? "…" : mode === "in" ? "Anmelden" : "Registrieren"}</Button>
-          <button type="button" className="text-sm text-muted-foreground underline" onClick={() => setMode(mode === "in" ? "up" : "in")}>
-            {mode === "in" ? "Noch kein Konto? Registrieren" : "Schon registriert? Anmelden"}
-          </button>
         </form>
       </div>
     </div>

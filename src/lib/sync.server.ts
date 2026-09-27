@@ -52,15 +52,19 @@ function isGermany(j: any) {
   return (j.stellenlokationen ?? []).some((l: any) => l?.adresse?.land === "DEUTSCHLAND");
 }
 
-/** Sync one keyword across all IT professional fields. Returns counters. */
-export async function syncKeyword(admin: Admin, keyword: string, runStartedAt: string) {
+/** Sync one keyword (or all IT jobs when keyword is null) across all IT professional fields. Returns counters. */
+export async function syncKeyword(admin: Admin, keyword: string | null, runStartedAt: string, loc?: { wo: string; umkreis?: number }) {
   const c = { requests: 0, fetched: 0, skipped: 0, new: 0, updated: 0, errors: [] as string[] };
   const collected = new Map<string, ReturnType<typeof mapJob>>();
+  const label = keyword ?? `stadt:${loc?.wo ?? ""}`;
 
   for (const field of IT_BERUFSFELDER) {
     for (let page = 1; page <= MAX_PAGES; page++) {
       try {
-        const d = await searchJobs({ was: keyword, berufsfeld: field, angebotsart: 1, page, size: PAGE_SIZE });
+        const params: Parameters<typeof searchJobs>[0] = { berufsfeld: field, angebotsart: 1, page, size: PAGE_SIZE };
+        if (keyword) params.was = keyword;
+        if (loc?.wo) { params.wo = loc.wo; if (loc.umkreis) params.umkreis = loc.umkreis; }
+        const d = await searchJobs(params);
         c.requests++;
         const list: any[] = d.ergebnisliste ?? [];
         for (const j of list) {
@@ -68,12 +72,12 @@ export async function syncKeyword(admin: Admin, keyword: string, runStartedAt: s
           if (!isGermany(j)) { c.skipped++; continue; }
           const prev = collected.get(j.referenznummer);
           if (prev) { if (!prev.berufsfelder.includes(field)) prev.berufsfelder.push(field); }
-          else collected.set(j.referenznummer, mapJob(j, field, keyword));
+          else collected.set(j.referenznummer, mapJob(j, field, label));
         }
         await politeDelay();
         if (list.length < PAGE_SIZE || page * PAGE_SIZE >= (d.maxErgebnisse ?? 0)) break;
       } catch (e) {
-        c.errors.push(`${keyword} / ${field} / Seite ${page}: ${(e as Error).message}`);
+        c.errors.push(`${label} / ${field} / Seite ${page}: ${(e as Error).message}`);
         break;
       }
     }
@@ -134,14 +138,15 @@ export async function recordKeyword(admin: Admin, runId: string, c: Awaited<Retu
   }).eq("id", runId);
 }
 
-/** Mark postings not seen for `days` as expired; only after a complete, error-free run. */
+/** Mark postings not seen for `days` as expired; only after a complete, error-free full run (never city runs). */
 export async function finishRun(admin: Admin, runId: string, expireDays = 3) {
   const { data: run } = await admin.from("sync_runs").select("*").eq("id", runId).single();
   if (!run) throw new Error("Run not found");
   let expired = 0;
   const complete = run.keywords_done >= run.keywords_total;
   const clean = (run.errors ?? []).length === 0;
-  if (complete && clean) {
+  const isFullRun = run.trigger !== "city";
+  if (complete && clean && isFullRun) {
     const cutoff = new Date(Date.now() - expireDays * 86400000).toISOString();
     const { data } = await admin.from("jobs").update({ expired: true }).lt("last_seen", cutoff).eq("expired", false).select("refnr");
     expired = data?.length ?? 0;

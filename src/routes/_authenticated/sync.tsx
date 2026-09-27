@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { finishSyncRun, startSyncRun, syncCityRun, syncOneKeyword } from "@/lib/sync.functions";
+import { cityRunStep, finishCityRun, finishSyncRun, startCityRun, startSyncRun, syncOneKeyword } from "@/lib/sync.functions";
 import { processLanguageBatch } from "@/lib/reports.functions";
 import { PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,10 @@ function SyncPage() {
   const one = useServerFn(syncOneKeyword);
   const finish = useServerFn(finishSyncRun);
   const analyse = useServerFn(processLanguageBatch);
-  const citySync = useServerFn(syncCityRun);
+  const cityStart = useServerFn(startCityRun);
+  const cityStep = useServerFn(cityRunStep);
+  const cityFinish = useServerFn(finishCityRun);
+  const [cityStatus, setCityStatus] = useState<string | null>(null);
   const [prog, setProg] = useState<{ i: number; n: number; kw: string; fetched: number; new: number } | null>(null);
   const [newTerm, setNewTerm] = useState("");
   const [city, setCity] = useState("");
@@ -86,9 +89,18 @@ function SyncPage() {
     if (c.length < 2) { toast.error("Bitte eine Stadt eingeben."); return; }
     setCityBusy(true);
     try {
-      const r = await citySync({ data: { city: c, radiusKm: Number(cityRadius), mode: cityMode } });
-      if (r.errors.length) toast.warning(`${r.errors.length} Fehler – Details im Abruf-Protokoll.`);
-      toast.success(`Stadt-Abruf ${c} (${r.status}): ${r.fetched} gefunden, ${r.new} neu, ${r.updated} aktualisiert.`);
+      const radiusKm = Number(cityRadius);
+      const s = await cityStart({ data: { mode: cityMode } });
+      const t = { fetched: 0, new: 0, updated: 0, errors: 0 };
+      for (let i = 0; i < s.steps.length; i++) {
+        const kw = s.steps[i] ?? null;
+        setCityStatus(`${i + 1}/${s.steps.length}: ${kw ?? "Alle IT-Stellen"} · ${t.fetched} gefunden`);
+        const r = await cityStep({ data: { runId: s.runId, keyword: kw, city: c, radiusKm, startedAt: s.startedAt } });
+        t.fetched += r.fetched; t.new += r.new; t.updated += r.updated; t.errors += r.errors.length;
+      }
+      const f = await cityFinish({ data: { runId: s.runId } });
+      if (t.errors) toast.warning(`${t.errors} Fehler – Details im Abruf-Protokoll.`);
+      toast.success(`Stadt-Abruf ${c} (${f.status}): ${t.fetched} gefunden, ${t.new} neu, ${t.updated} aktualisiert.`);
       qc.invalidateQueries();
     } catch (e) {
       toast.error((e as Error).message);
@@ -141,6 +153,7 @@ function SyncPage() {
               </Select>
             </div>
             <Button onClick={runCity} disabled={cityBusy || !!prog}>{cityBusy ? "Läuft…" : "Stadt abrufen"}</Button>
+            {cityBusy && cityStatus && <span className="text-xs text-muted-foreground">{cityStatus}</span>}
           </div>
         </div>
         <div>

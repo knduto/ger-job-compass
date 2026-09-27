@@ -93,6 +93,47 @@ export type Database = {
           },
         ]
       }
+      job_language_analysis: {
+        Row: {
+          analysed_at: string
+          cefr_level: string | null
+          classification: string
+          english_accessible: boolean | null
+          evidence: string[]
+          extraction_version: number
+          german_required: boolean | null
+          refnr: string
+        }
+        Insert: {
+          analysed_at?: string
+          cefr_level?: string | null
+          classification?: string
+          english_accessible?: boolean | null
+          evidence?: string[]
+          extraction_version?: number
+          german_required?: boolean | null
+          refnr: string
+        }
+        Update: {
+          analysed_at?: string
+          cefr_level?: string | null
+          classification?: string
+          english_accessible?: boolean | null
+          evidence?: string[]
+          extraction_version?: number
+          german_required?: boolean | null
+          refnr?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_language_analysis_refnr_fkey"
+            columns: ["refnr"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["refnr"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           alle_berufe: string[]
@@ -192,6 +233,54 @@ export type Database = {
           salary_to?: number | null
           salary_type?: string | null
           title?: string
+        }
+        Relationships: []
+      }
+      market_snapshots: {
+        Row: {
+          active_jobs: number
+          analysed_jobs: number
+          city: string
+          created_at: string
+          employers: number
+          english_accessible: number
+          expired_jobs: number
+          german_required: number
+          id: string
+          new_7d: number
+          remote_pct: number
+          salary_pct: number
+          snapshot_date: string
+        }
+        Insert: {
+          active_jobs?: number
+          analysed_jobs?: number
+          city?: string
+          created_at?: string
+          employers?: number
+          english_accessible?: number
+          expired_jobs?: number
+          german_required?: number
+          id?: string
+          new_7d?: number
+          remote_pct?: number
+          salary_pct?: number
+          snapshot_date?: string
+        }
+        Update: {
+          active_jobs?: number
+          analysed_jobs?: number
+          city?: string
+          created_at?: string
+          employers?: number
+          english_accessible?: number
+          expired_jobs?: number
+          german_required?: number
+          id?: string
+          new_7d?: number
+          remote_pct?: number
+          salary_pct?: number
+          snapshot_date?: string
         }
         Relationships: []
       }

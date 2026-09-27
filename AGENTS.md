@@ -22,3 +22,9 @@
 - Language classifications and daily market snapshots are evidence-based derivatives of stored Arbeitsagentur listings; vague German wording never receives an inferred CEFR level.
 - City-sync selection uses inline segmented buttons and a local error boundary so a control failure cannot replace the entire Live-Abruf page.
 - Global error handling preserves TanStack server-function responses and renders the standalone HTML error page only for document requests — RPC errors must remain catchable inside their calling section.
+
+# Process rules
+
+- Every new migration in `drizzle/migrations/` ships with a matching `drizzle/rollbacks/NNNN_name.down.sql` and a `MIGRATIONS.md` log row using its compatibility criteria — rollbacks and the log keep schema history reversible and auditable.
+- Larger documentation work is delivered in stages, each built in an isolated draft and accepted by the owner before the next stage — the owner reviews before anything lands in main.
+- `.env` and `.env.*` are gitignored; only `.env.example` with placeholder values is committed — real connection values never enter git.

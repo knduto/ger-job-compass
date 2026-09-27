@@ -11,6 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedExploreRouteImport } from './routes/_authenticated/explore'
+import { Route as AuthenticatedJobsRefnrRouteImport } from './routes/_authenticated/jobs.$refnr'
 import { Route as ApiPublicCronDailySyncRouteImport } from './routes/api/public/cron/daily-sync'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -22,6 +25,21 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedExploreRoute = AuthenticatedExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedJobsRefnrRoute = AuthenticatedJobsRefnrRouteImport.update({
+  id: '/jobs/$refnr',
+  path: '/jobs/$refnr',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicCronDailySyncRoute = ApiPublicCronDailySyncRouteImport.update({
   id: '/api/public/cron/daily-sync',
   path: '/api/public/cron/daily-sync',
@@ -29,31 +47,47 @@ const ApiPublicCronDailySyncRoute = ApiPublicCronDailySyncRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AuthenticatedRouteRoute
+  '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/explore': typeof AuthenticatedExploreRoute
+  '/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
   '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof AuthenticatedRouteRoute
   '/auth': typeof AuthRoute
+  '/explore': typeof AuthenticatedExploreRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
   '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_authenticated': typeof AuthenticatedRouteRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/explore': typeof AuthenticatedExploreRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
   '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/api/public/cron/daily-sync'
+  fullPaths:
+    '/' | '/auth' | '/explore' | '/jobs/$refnr' | '/api/public/cron/daily-sync'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/api/public/cron/daily-sync'
-  id: '__root__' | '/_authenticated' | '/auth' | '/api/public/cron/daily-sync'
+  to:
+    '/auth' | '/explore' | '/' | '/jobs/$refnr' | '/api/public/cron/daily-sync'
+  id:
+    | '__root__'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/explore'
+    | '/_authenticated/'
+    | '/_authenticated/jobs/$refnr'
+    | '/api/public/cron/daily-sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AuthenticatedRouteRoute: typeof AuthenticatedRouteRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicCronDailySyncRoute: typeof ApiPublicCronDailySyncRoute
 }
@@ -74,6 +108,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/': {
+      id: '/_authenticated/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/explore': {
+      id: '/_authenticated/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof AuthenticatedExploreRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/jobs/$refnr': {
+      id: '/_authenticated/jobs/$refnr'
+      path: '/jobs/$refnr'
+      fullPath: '/jobs/$refnr'
+      preLoaderRoute: typeof AuthenticatedJobsRefnrRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/cron/daily-sync': {
       id: '/api/public/cron/daily-sync'
       path: '/api/public/cron/daily-sync'
@@ -84,8 +139,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedExploreRoute: typeof AuthenticatedExploreRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedJobsRefnrRoute: typeof AuthenticatedJobsRefnrRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedExploreRoute: AuthenticatedExploreRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedJobsRefnrRoute: AuthenticatedJobsRefnrRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  AuthenticatedRouteRoute: AuthenticatedRouteRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicCronDailySyncRoute: ApiPublicCronDailySyncRoute,
 }

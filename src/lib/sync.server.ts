@@ -61,7 +61,10 @@ export async function syncKeyword(admin: Admin, keyword: string | null, runStart
   for (const field of IT_BERUFSFELDER) {
     for (let page = 1; page <= MAX_PAGES; page++) {
       try {
-        const d = await searchJobs({ was: keyword ?? undefined, wo: loc?.wo, umkreis: loc?.umkreis, berufsfeld: field, angebotsart: 1, page, size: PAGE_SIZE });
+        const params: Parameters<typeof searchJobs>[0] = { berufsfeld: field, angebotsart: 1, page, size: PAGE_SIZE };
+        if (keyword) params.was = keyword;
+        if (loc?.wo) { params.wo = loc.wo; if (loc.umkreis) params.umkreis = loc.umkreis; }
+        const d = await searchJobs(params);
         c.requests++;
         const list: any[] = d.ergebnisliste ?? [];
         for (const j of list) {

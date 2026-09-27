@@ -13,3 +13,13 @@
 - [x] Contain city-section render and request failures
 - [x] Mark interrupted city runs incomplete
 - [x] Verify repeated selections and both signed-in request scopes
+# Engineering process setup (each stage built in a draft, merged only after user accepts)
+
+- [ ] Stage 1: rollback files for 0000–0006, MIGRATIONS.md, seed script (in draft)
+- [ ] Stage 2: README.md, SETUP.md + .env.example, STACK.md, REQUIREMENTS.md
+- [ ] Stage 3: ARCHITECTURE.md, CHANGELOG.md
+- [ ] Stage 4: CONTRIBUTING.md, DEPLOYMENT-LOCAL.md (full local-host guide), AGENTS.md updates
+
+# Open items
+
+- [ ] OPEN-001 (from 0006): server sync paths read all users' keywords with no owner filter — daily sync (api/public/cron/daily-sync.ts), manual sync and city keyword mode (sync.functions.ts), keyword count (sync.server.ts). No impact with one user; fix needs confirmation before code change.

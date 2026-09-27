@@ -114,6 +114,17 @@ function Reports() {
       </section>
       <section className="mb-8">
         <div className="mb-3 flex items-center gap-2"><h2 className="text-lg font-semibold">Städteranking</h2><Button variant="ghost" size="sm" onClick={() => setShowScoreInfo((v) => !v)}>{showScoreInfo ? "Erklärung ausblenden" : "Wie wird der Score berechnet?"}</Button></div>
+        <div className="mb-4 rounded-lg border bg-card p-4">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium">Meine Städte</span>
+            <select className={`${selectClass} max-w-xs`} value={cityPick} onChange={(e) => setCityPick(e.target.value)}>
+              <option value="">Stadt auswählen…</option>
+              {(cities.data ?? []).filter((c) => c.city && !trackedNames.includes(c.city)).map((c) => <option key={c.city} value={c.city ?? ""}>{c.city} ({c.active_jobs})</option>)}
+            </select>
+            <Button size="sm" variant="outline" disabled={!cityPick} onClick={async () => { try { await addTrackedCity(cityPick); setCityPick(""); await tracked.refetch(); } catch (e) { toast.error((e as Error).message); } }}>Hinzufügen</Button>
+          </div>
+          {trackedNames.length ? <div className="flex flex-wrap gap-2">{tracked.data!.map((t) => <span key={t.id} className="inline-flex items-center gap-1 rounded-full border bg-muted px-3 py-1 text-sm">{t.city}<button aria-label={`${t.city} entfernen`} onClick={async () => { await removeTrackedCity(t.id); await tracked.refetch(); }}><X className="h-3 w-3" /></button></span>)}</div> : <p className="text-sm text-muted-foreground">Noch keine eigenen Städte — das Ranking zeigt automatisch die 30 aktivsten Städte. Fügen Sie Städte hinzu, um das Ranking auf Ihre Auswahl zu beschränken.</p>}
+        </div>
         {showScoreInfo && <div className="mb-4 rounded-lg border bg-card p-4 text-sm text-muted-foreground"><ul className="list-disc space-y-1 pl-5">
           <li>Jede Stadt erhält 0–100 Punkte aus sechs Faktoren (siehe Regler unten).</li>
           <li>Jeder Faktor wird gegen die beste Stadt skaliert: die beste Stadt erhält die vollen Punkte, alle anderen anteilig.</li>

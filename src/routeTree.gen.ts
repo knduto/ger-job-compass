@@ -15,6 +15,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedEmployersRouteImport } from './routes/_authenticated/employers'
 import { Route as AuthenticatedExploreRouteImport } from './routes/_authenticated/explore'
 import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedEmployersNameRouteImport } from './routes/_authenticated/employers_.$name'
 import { Route as AuthenticatedJobsRefnrRouteImport } from './routes/_authenticated/jobs.$refnr'
 import { Route as ApiPublicCronDailySyncRouteImport } from './routes/api/public/cron/daily-sync'
@@ -48,6 +49,11 @@ const AuthenticatedPipelineRoute = AuthenticatedPipelineRouteImport.update({
   path: '/pipeline',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedEmployersNameRoute =
   AuthenticatedEmployersNameRouteImport.update({
     id: '/employers_/$name',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/employers': typeof AuthenticatedEmployersRoute
   '/explore': typeof AuthenticatedExploreRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/employers/$name': typeof AuthenticatedEmployersNameRoute
   '/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
   '/api/public/cron/daily-sync': typeof ApiPublicCronDailySyncRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/employers': typeof AuthenticatedEmployersRoute
   '/explore': typeof AuthenticatedExploreRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/': typeof AuthenticatedIndexRoute
   '/employers/$name': typeof AuthenticatedEmployersNameRoute
   '/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/_authenticated/employers': typeof AuthenticatedEmployersRoute
   '/_authenticated/explore': typeof AuthenticatedExploreRoute
   '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/employers_/$name': typeof AuthenticatedEmployersNameRoute
   '/_authenticated/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/employers'
     | '/explore'
     | '/pipeline'
+    | '/reports'
     | '/employers/$name'
     | '/jobs/$refnr'
     | '/api/public/cron/daily-sync'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
     | '/employers'
     | '/explore'
     | '/pipeline'
+    | '/reports'
     | '/'
     | '/employers/$name'
     | '/jobs/$refnr'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
     | '/_authenticated/employers'
     | '/_authenticated/explore'
     | '/_authenticated/pipeline'
+    | '/_authenticated/reports'
     | '/_authenticated/'
     | '/_authenticated/employers_/$name'
     | '/_authenticated/jobs/$refnr'
@@ -181,6 +193,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPipelineRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/employers_/$name': {
       id: '/_authenticated/employers_/$name'
       path: '/employers/$name'
@@ -209,6 +228,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEmployersRoute: typeof AuthenticatedEmployersRoute
   AuthenticatedExploreRoute: typeof AuthenticatedExploreRoute
   AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedEmployersNameRoute: typeof AuthenticatedEmployersNameRoute
   AuthenticatedJobsRefnrRoute: typeof AuthenticatedJobsRefnrRoute
@@ -218,6 +238,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEmployersRoute: AuthenticatedEmployersRoute,
   AuthenticatedExploreRoute: AuthenticatedExploreRoute,
   AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedEmployersNameRoute: AuthenticatedEmployersNameRoute,
   AuthenticatedJobsRefnrRoute: AuthenticatedJobsRefnrRoute,

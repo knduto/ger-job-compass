@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Download, FileSpreadsheet, RefreshCw } from "lucide-react";
+import { Download, FileSpreadsheet, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Stat, fmt } from "@/components/AppShell";
@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { IT_BERUFSFELDER } from "@/lib/it-fields";
 import { getReportData, processLanguageBatch, type ReportFilters } from "@/lib/reports.functions";
 import { buildReportMetrics, employerKind, type ReportJob } from "@/lib/report-metrics";
-import { fetchAllCityStats, must } from "@/lib/queries";
+import { addTrackedCity, fetchAllCityStats, fetchTrackedCities, must, removeTrackedCity } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({ meta: [
@@ -49,13 +49,22 @@ function Reports() {
   const [showScoreInfo, setShowScoreInfo] = useState(false);
   const [processing, setProcessing] = useState(false);
   const cities = useQuery({ queryKey: ["city_stats"], queryFn: fetchAllCityStats });
+  const tracked = useQuery({ queryKey: ["tracked_cities"], queryFn: fetchTrackedCities });
+  const [cityPick, setCityPick] = useState("");
   const keywords = useQuery({ queryKey: ["keywords-report"], queryFn: async () => (await must(supabase.from("search_keywords").select("term").eq("active", true).order("term"))).data ?? [] });
   const report = useQuery({ queryKey: ["decision-report", filters], queryFn: () => reportFn({ data: filters }) });
   const rows = (report.data?.rows ?? []) as ReportJob[];
   const metrics = useMemo(() => buildReportMetrics(rows, weights), [rows, weights]);
+  const trackedNames = (tracked.data ?? []).map((t) => t.city);
+  const rankedCities = useMemo(() => {
+    if (!trackedNames.length) return metrics.cities.slice(0, 30);
+    const byName = new Map(metrics.cities.map((c) => [c.city, c]));
+    const empty = (city: string) => ({ city, active: 0, total: 0, expired: 0, new7: 0, employers: 0, remotePct: 0, permanentPct: 0, salaryPct: 0, languageCoverage: 0, englishPct: 0, expiryPct: 0, avgDays: 0, contributions: { volume: 0, growth: 0, remote: 0, permanent: 0, diversity: 0, language: 0 }, score: 0 });
+    return trackedNames.map((name) => byName.get(name) ?? empty(name)).sort((a, b) => b.score - a.score);
+  }, [metrics.cities, trackedNames]);
   const analysedPct = rows.length ? 100 * metrics.analysed / rows.length : 0;
-  const topCity = metrics.cities[0];
-  const newestCity = [...metrics.cities].sort((a, b) => b.new7 / Math.max(1, b.active) - a.new7 / Math.max(1, a.active))[0];
+  const topCity = rankedCities[0];
+  const newestCity = [...rankedCities].sort((a, b) => b.new7 / Math.max(1, b.active) - a.new7 / Math.max(1, a.active))[0];
   const salaryValues = rows.flatMap((r) => [r.salary_from, r.salary_to]).filter((n): n is number => n !== null);
   const snapshotSeries = (report.data?.snapshots ?? []).filter((s) => !selected.length || selected.includes(s.city)).reduce<Record<string, any>>((acc, s) => {
     const row = acc[s.snapshot_date] ?? { date: s.snapshot_date, active: 0, new7: 0, english: 0, analysed: 0 };
@@ -105,6 +114,17 @@ function Reports() {
       </section>
       <section className="mb-8">
         <div className="mb-3 flex items-center gap-2"><h2 className="text-lg font-semibold">Städteranking</h2><Button variant="ghost" size="sm" onClick={() => setShowScoreInfo((v) => !v)}>{showScoreInfo ? "Erklärung ausblenden" : "Wie wird der Score berechnet?"}</Button></div>
+        <div className="mb-4 rounded-lg border bg-card p-4">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium">Meine Städte</span>
+            <select className={`${selectClass} max-w-xs`} value={cityPick} onChange={(e) => setCityPick(e.target.value)}>
+              <option value="">Stadt auswählen…</option>
+              {(cities.data ?? []).filter((c) => c.city && !trackedNames.includes(c.city)).map((c) => <option key={c.city} value={c.city ?? ""}>{c.city} ({c.active_jobs})</option>)}
+            </select>
+            <Button size="sm" variant="outline" disabled={!cityPick} onClick={async () => { try { await addTrackedCity(cityPick); setCityPick(""); await tracked.refetch(); } catch (e) { toast.error((e as Error).message); } }}>Hinzufügen</Button>
+          </div>
+          {trackedNames.length ? <div className="flex flex-wrap gap-2">{tracked.data!.map((t) => <span key={t.id} className="inline-flex items-center gap-1 rounded-full border bg-muted px-3 py-1 text-sm">{t.city}<button aria-label={`${t.city} entfernen`} onClick={async () => { await removeTrackedCity(t.id); await tracked.refetch(); }}><X className="h-3 w-3" /></button></span>)}</div> : <p className="text-sm text-muted-foreground">Noch keine eigenen Städte — das Ranking zeigt automatisch die 30 aktivsten Städte. Fügen Sie Städte hinzu, um das Ranking auf Ihre Auswahl zu beschränken.</p>}
+        </div>
         {showScoreInfo && <div className="mb-4 rounded-lg border bg-card p-4 text-sm text-muted-foreground"><ul className="list-disc space-y-1 pl-5">
           <li>Jede Stadt erhält 0–100 Punkte aus sechs Faktoren (siehe Regler unten).</li>
           <li>Jeder Faktor wird gegen die beste Stadt skaliert: die beste Stadt erhält die vollen Punkte, alle anderen anteilig.</li>
@@ -112,8 +132,8 @@ function Reports() {
           <li>Endscore = gewichtete Summe aller Faktoren, auf 100 skaliert. Klicken Sie eine Stadt an, um ihre Punktaufteilung zu sehen.</li>
         </ul></div>}
         <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">{Object.entries(weights).map(([key, value]) => <div key={key} className="space-y-2 text-sm"><div className="flex justify-between"><span title={weightHints[key]}>{weightLabels[key]}</span><span className="font-mono">{value}</span></div><Slider min={0} max={10} value={[value]} onValueChange={([v]) => setWeights((w) => ({ ...w, [key]: v }))}/><p className="text-xs text-muted-foreground">{weightHints[key]}{key === "language" && analysedPct < 50 ? ` (bisher nur ${analysedPct.toFixed(0)} % analysiert)` : ""}</p></div>)}</div>
-        <div className="overflow-x-auto rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr>{["Vgl.","#","Stadt","Score","Aktiv","Neu 7T","Arbeitgeber","Remote","Englisch*","Gehalt"].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2 text-left">{h}</th>)}</tr></thead><tbody>{metrics.cities.slice(0,30).map((r,i) => <tr key={r.city} onClick={() => setDetailCity(detailCity === r.city ? null : r.city)} className={`cursor-pointer border-t hover:bg-muted/50 ${detailCity === r.city ? "bg-muted/40" : ""}`}><td className="px-3 py-2"><input type="checkbox" onClick={(e) => e.stopPropagation()} checked={selected.includes(r.city)} onChange={(e) => setSelected(e.target.checked ? [...selected,r.city] : selected.filter((v) => v !== r.city))}/></td><td className="px-3 py-2 text-muted-foreground">{i+1}</td><td className="px-3 py-2 font-medium">{r.city}</td><td className="px-3 py-2 font-mono text-accent">{r.score.toFixed(0)}</td><td className="px-3 py-2 font-mono">{r.active}</td><td className="px-3 py-2 font-mono">{r.new7}</td><td className="px-3 py-2 font-mono">{r.employers}</td><td className="px-3 py-2 font-mono">{r.remotePct.toFixed(1)} %</td><td className="px-3 py-2 font-mono">{r.languageCoverage ? `${r.englishPct.toFixed(1)} %` : "–"}</td><td className="px-3 py-2 font-mono">{r.salaryPct.toFixed(1)} %</td></tr>)}</tbody></table></div><p className="mt-2 text-xs text-muted-foreground">* Anteil nur innerhalb sprachlich analysierter Stellen der jeweiligen Stadt.</p>
-        {detailCity && (() => { const city = metrics.cities.find((c) => c.city === detailCity); if (!city) return null; const total = Object.values(city.contributions).reduce((s, v) => s + v, 0) || 1; return <div className="mt-3 rounded-lg border bg-card p-4"><h3 className="mb-2 text-sm font-semibold">Punktaufteilung: {city.city} (Score {city.score.toFixed(0)})</h3><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{Object.entries(city.contributions).map(([key, value]) => <div key={key} className="text-sm"><div className="flex justify-between"><span className="text-muted-foreground">{weightLabels[key]}</span><span className="font-mono">{(value / total * city.score).toFixed(1)} Pkt.</span></div><div className="mt-1 h-1.5 rounded bg-muted"><div className="h-1.5 rounded bg-accent" style={{ width: `${total ? 100 * value / total : 0}%` }} /></div></div>)}</div><p className="mt-2 text-xs text-muted-foreground">Anteil jedes Faktors am Endscore, nach Ihren Regler-Gewichten.</p></div>; })()}
+        <div className="overflow-x-auto rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr>{["Vgl.","#","Stadt","Score","Aktiv","Neu 7T","Arbeitgeber","Remote","Englisch*","Gehalt"].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2 text-left">{h}</th>)}</tr></thead><tbody>{rankedCities.map((r,i) => <tr key={r.city} onClick={() => setDetailCity(detailCity === r.city ? null : r.city)} className={`cursor-pointer border-t hover:bg-muted/50 ${detailCity === r.city ? "bg-muted/40" : ""}`}><td className="px-3 py-2"><input type="checkbox" onClick={(e) => e.stopPropagation()} checked={selected.includes(r.city)} onChange={(e) => setSelected(e.target.checked ? [...selected,r.city] : selected.filter((v) => v !== r.city))}/></td><td className="px-3 py-2 text-muted-foreground">{i+1}</td><td className="px-3 py-2 font-medium">{r.city}</td><td className="px-3 py-2 font-mono text-accent">{r.score.toFixed(0)}</td><td className="px-3 py-2 font-mono">{r.active}</td><td className="px-3 py-2 font-mono">{r.new7}</td><td className="px-3 py-2 font-mono">{r.employers}</td><td className="px-3 py-2 font-mono">{r.remotePct.toFixed(1)} %</td><td className="px-3 py-2 font-mono">{r.languageCoverage ? `${r.englishPct.toFixed(1)} %` : "–"}</td><td className="px-3 py-2 font-mono">{r.salaryPct.toFixed(1)} %</td></tr>)}</tbody></table></div><p className="mt-2 text-xs text-muted-foreground">* Anteil nur innerhalb sprachlich analysierter Stellen der jeweiligen Stadt.</p>
+        {detailCity && (() => { const city = rankedCities.find((c) => c.city === detailCity); if (!city) return null; const total = Object.values(city.contributions).reduce((s, v) => s + v, 0) || 1; return <div className="mt-3 rounded-lg border bg-card p-4"><h3 className="mb-2 text-sm font-semibold">Punktaufteilung: {city.city} (Score {city.score.toFixed(0)})</h3><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{Object.entries(city.contributions).map(([key, value]) => <div key={key} className="text-sm"><div className="flex justify-between"><span className="text-muted-foreground">{weightLabels[key]}</span><span className="font-mono">{(value / total * city.score).toFixed(1)} Pkt.</span></div><div className="mt-1 h-1.5 rounded bg-muted"><div className="h-1.5 rounded bg-accent" style={{ width: `${total ? 100 * value / total : 0}%` }} /></div></div>)}</div><p className="mt-2 text-xs text-muted-foreground">Anteil jedes Faktors am Endscore, nach Ihren Regler-Gewichten.</p></div>; })()}
       </section>
       <section className="mb-8"><h2 className="mb-3 text-lg font-semibold">Markt & Arbeitgeber</h2><div className="grid gap-4 lg:grid-cols-3"><Stat label="Größter Arbeitgeber" value={metrics.employerCounts[0]?.[0] ?? "–"} hint={`${fmt(metrics.employerCounts[0]?.[1])} Stellen`} /><Stat label="Agenturhinweis" value={`${(100 * metrics.agency / rows.length).toFixed(1)} %`} hint="Nur klare Namensmerkmale" /><Stat label="Gehaltsspanne" value={salaryValues.length ? `${fmt(Math.min(...salaryValues))}–${fmt(Math.max(...salaryValues))} €` : "–"} /></div><div className="mt-4 overflow-x-auto rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr><th className="px-3 py-2 text-left">Arbeitgeber</th><th className="px-3 py-2 text-left">Klassifikation</th><th className="px-3 py-2 text-right">Stellen</th></tr></thead><tbody>{metrics.employerCounts.slice(0,15).map(([name,n]) => <tr key={name} className="border-t"><td className="px-3 py-2">{name}</td><td className="px-3 py-2 text-muted-foreground">{employerKind(name)}</td><td className="px-3 py-2 text-right font-mono">{n}</td></tr>)}</tbody></table></div></section>
       <section className="mb-8"><h2 className="mb-3 text-lg font-semibold">Stellen-Lebenszyklus</h2><div className="overflow-x-auto rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr>{["Stadt","Gesamt beobachtet","Abgelaufen","Ablaufquote","Ø beobachtete Tage"].map((h) => <th key={h} className="px-3 py-2 text-left">{h}</th>)}</tr></thead><tbody>{metrics.cities.slice(0,20).map((r) => <tr key={r.city} className="border-t"><td className="px-3 py-2 font-medium">{r.city}</td><td className="px-3 py-2">{r.total}</td><td className="px-3 py-2">{r.expired}</td><td className="px-3 py-2">{r.expiryPct.toFixed(1)} %</td><td className="px-3 py-2">{r.avgDays.toFixed(1)}</td></tr>)}</tbody></table></div></section>

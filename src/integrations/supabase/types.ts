@@ -356,6 +356,27 @@ export type Database = {
         }
         Relationships: []
       }
+      tracked_cities: {
+        Row: {
+          city: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       city_employer_share: {

@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { IT_BERUFSFELDER } from "@/lib/it-fields";
 import { getReportData, processLanguageBatch, type ReportFilters } from "@/lib/reports.functions";
 import { buildReportMetrics, employerKind, type ReportJob } from "@/lib/report-metrics";
-import { fetchAllCityStats, must } from "@/lib/queries";
+import { addTrackedCity, fetchAllCityStats, fetchTrackedCities, must, removeTrackedCity } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({ meta: [
@@ -49,13 +49,22 @@ function Reports() {
   const [showScoreInfo, setShowScoreInfo] = useState(false);
   const [processing, setProcessing] = useState(false);
   const cities = useQuery({ queryKey: ["city_stats"], queryFn: fetchAllCityStats });
+  const tracked = useQuery({ queryKey: ["tracked_cities"], queryFn: fetchTrackedCities });
+  const [cityPick, setCityPick] = useState("");
   const keywords = useQuery({ queryKey: ["keywords-report"], queryFn: async () => (await must(supabase.from("search_keywords").select("term").eq("active", true).order("term"))).data ?? [] });
   const report = useQuery({ queryKey: ["decision-report", filters], queryFn: () => reportFn({ data: filters }) });
   const rows = (report.data?.rows ?? []) as ReportJob[];
   const metrics = useMemo(() => buildReportMetrics(rows, weights), [rows, weights]);
+  const trackedNames = (tracked.data ?? []).map((t) => t.city);
+  const rankedCities = useMemo(() => {
+    if (!trackedNames.length) return metrics.cities.slice(0, 30);
+    const byName = new Map(metrics.cities.map((c) => [c.city, c]));
+    const empty = (city: string) => ({ city, active: 0, total: 0, expired: 0, new7: 0, employers: 0, remotePct: 0, permanentPct: 0, salaryPct: 0, languageCoverage: 0, englishPct: 0, expiryPct: 0, avgDays: 0, contributions: { volume: 0, growth: 0, remote: 0, permanent: 0, diversity: 0, language: 0 }, score: 0 });
+    return trackedNames.map((name) => byName.get(name) ?? empty(name)).sort((a, b) => b.score - a.score);
+  }, [metrics.cities, trackedNames]);
   const analysedPct = rows.length ? 100 * metrics.analysed / rows.length : 0;
-  const topCity = metrics.cities[0];
-  const newestCity = [...metrics.cities].sort((a, b) => b.new7 / Math.max(1, b.active) - a.new7 / Math.max(1, a.active))[0];
+  const topCity = rankedCities[0];
+  const newestCity = [...rankedCities].sort((a, b) => b.new7 / Math.max(1, b.active) - a.new7 / Math.max(1, a.active))[0];
   const salaryValues = rows.flatMap((r) => [r.salary_from, r.salary_to]).filter((n): n is number => n !== null);
   const snapshotSeries = (report.data?.snapshots ?? []).filter((s) => !selected.length || selected.includes(s.city)).reduce<Record<string, any>>((acc, s) => {
     const row = acc[s.snapshot_date] ?? { date: s.snapshot_date, active: 0, new7: 0, english: 0, analysed: 0 };

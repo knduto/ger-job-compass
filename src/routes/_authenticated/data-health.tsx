@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_authenticated/data-health")({
   component: Health,
 });
 
-const cnt = async (f: (q: any) => any) => (await must(f(supabase.from("jobs").select("refnr", { count: "exact", head: true })))).count ?? 0;
+const cnt = async (f: (q: any) => any) => ((await must(f(supabase.from("jobs").select("refnr", { count: "exact", head: true })))) as any).count as number ?? 0;
 
 function Health() {
   const q = useQuery({

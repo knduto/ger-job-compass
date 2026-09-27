@@ -92,13 +92,18 @@ function SyncPage() {
       const radiusKm = Number(cityRadius);
       const s = await cityStart({ data: { mode: cityMode } });
       const t = { fetched: 0, new: 0, updated: 0, errors: 0 };
+      const seenRefs = new Set<string>();
+      const newRefs = new Set<string>();
       for (let i = 0; i < s.steps.length; i++) {
-        const kw = s.steps[i] ?? null;
-        setCityStatus(`${i + 1}/${s.steps.length}: ${kw ?? "Alle IT-Stellen"} · ${t.fetched} gefunden`);
-        const r = await cityStep({ data: { runId: s.runId, keyword: kw, city: c, radiusKm, startedAt: s.startedAt } });
-        t.fetched += r.fetched; t.new += r.new; t.updated += r.updated; t.errors += r.errors.length;
+        const step = s.steps[i];
+        if (!step) continue;
+        setCityStatus(`${i + 1}/${s.steps.length}: ${step.keyword ?? "Alle IT-Stellen"} · ${step.field} · ${seenRefs.size} gefunden`);
+        const r = await cityStep({ data: { runId: s.runId, keyword: step.keyword, field: step.field, city: c, radiusKm, startedAt: s.startedAt } });
+        r.refs.forEach((ref) => seenRefs.add(ref));
+        r.newRefs.forEach((ref) => newRefs.add(ref));
+        t.fetched = seenRefs.size; t.new = newRefs.size; t.updated = t.fetched - t.new; t.errors += r.errors.length;
       }
-      const f = await cityFinish({ data: { runId: s.runId } });
+      const f = await cityFinish({ data: { runId: s.runId, fetched: t.fetched, newCount: t.new, updated: t.updated } });
       if (t.errors) toast.warning(`${t.errors} Fehler – Details im Abruf-Protokoll.`);
       toast.success(`Stadt-Abruf ${c} (${f.status}): ${t.fetched} gefunden, ${t.new} neu, ${t.updated} aktualisiert.`);
       qc.invalidateQueries();
@@ -106,6 +111,7 @@ function SyncPage() {
       toast.error((e as Error).message);
     } finally {
       setCityBusy(false);
+      setCityStatus(null);
     }
   }
 

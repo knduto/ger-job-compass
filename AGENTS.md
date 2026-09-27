@@ -12,7 +12,7 @@
 # Architecture rules
 
 - Job data comes only from the Arbeitsagentur API: search `pc/v6/jobs`, details `pc/v4/jobdetails/{base64(refnr)}` with `X-API-KEY: jobboerse-jobsuche` — v4 search and v6 details return 403.
-- Sync logic lives in `src/lib/sync.server.ts`, shared by the manual sync (per-keyword server fn calls from the browser) and the daily cron route `/api/public/cron/daily-sync` — one code path keeps numbers consistent.
+- Sync logic lives in `src/lib/sync.server.ts`, shared by manual, city, and daily runs; city runs call one keyword/IT-field pair per request and finalize exact deduplicated totals without rebuilding global snapshots — short requests prevent page-level timeouts while preserving accurate counts.
 - Each keyword is queried per IT berufsfeld from `src/lib/it-fields.ts` (exact API facet names); only postings with a German location are stored — keeps data IT-only and Germany-only.
 - Jobs are upserted by `refnr` and only marked expired after a complete, error-free run where they were unseen for 3 days — never deleted, so history is preserved.
 - Job/sync tables are written only via service role on the server; the browser reads them through RLS (authenticated), and `applications` is scoped to `auth.uid()`.

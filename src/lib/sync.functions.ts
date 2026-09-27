@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { IT_BERUFSFELDER } from "./it-fields";
 
 export const startSyncRun = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -40,14 +41,15 @@ export const startCityRun = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ mode: z.enum(["all", "keywords"]) }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    let steps: (string | null)[];
+    let keywords: (string | null)[];
     if (data.mode === "all") {
-      steps = [null];
+      keywords = [null];
     } else {
       const { data: kws } = await supabaseAdmin.from("search_keywords").select("term").eq("active", true).order("term");
-      steps = (kws ?? []).map((k) => k.term as string);
-      if (!steps.length) throw new Error("Keine aktiven Suchbegriffe.");
+      keywords = (kws ?? []).map((k) => k.term as string);
+      if (!keywords.length) throw new Error("Keine aktiven Suchbegriffe.");
     }
+    const steps = keywords.flatMap((keyword) => IT_BERUFSFELDER.map((field) => ({ keyword, field })));
     const { data: run, error } = await supabaseAdmin.from("sync_runs").insert({ trigger: "city", keywords_total: steps.length }).select().single();
     if (error) throw new Error(error.message);
     return { runId: run.id as string, steps, startedAt: new Date().toISOString() };
@@ -58,6 +60,7 @@ export const cityRunStep = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({
     runId: z.string().uuid(),
     keyword: z.string().max(120).nullable(),
+    field: z.string().min(1).max(120),
     city: z.string().trim().min(2).max(80),
     radiusKm: z.number().int().min(0).max(200),
     startedAt: z.string(),
@@ -66,23 +69,42 @@ export const cityRunStep = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { syncKeyword, recordKeyword } = await import("./sync.server");
     const loc: { wo: string; umkreis?: number } = data.radiusKm ? { wo: data.city, umkreis: data.radiusKm } : { wo: data.city };
+    if (!(IT_BERUFSFELDER as readonly string[]).includes(data.field)) {
+      return { fetched: 0, new: 0, updated: 0, refs: [] as string[], newRefs: [] as string[], errors: ["Ungültiges Berufsfeld."] };
+    }
     try {
-      const c = await syncKeyword(supabaseAdmin, data.keyword, data.startedAt, loc);
+      const c = await syncKeyword(supabaseAdmin, data.keyword, data.startedAt, loc, [data.field]);
       await recordKeyword(supabaseAdmin, data.runId, c);
-      return { fetched: c.fetched, new: c.new, updated: c.updated, errors: c.errors };
+      return { fetched: c.fetched, new: c.new, updated: c.updated, refs: c.refs, newRefs: c.newRefs, errors: c.errors };
     } catch (e) {
-      return { fetched: 0, new: 0, updated: 0, errors: [`${data.keyword ?? data.city}: ${(e as Error).message}`] };
+      return { fetched: 0, new: 0, updated: 0, refs: [] as string[], newRefs: [] as string[], errors: [`${data.keyword ?? data.city} / ${data.field}: ${(e as Error).message}`] };
     }
   });
 
 export const finishCityRun = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ runId: z.string().uuid() }).parse(d))
+  .inputValidator((d) => z.object({
+    runId: z.string().uuid(),
+    fetched: z.number().int().nonnegative(),
+    newCount: z.number().int().nonnegative(),
+    updated: z.number().int().nonnegative(),
+  }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { finishRun } = await import("./sync.server");
-    const res = await finishRun(supabaseAdmin, data.runId);
-    return { status: res.status };
+    const { data: run, error: readError } = await supabaseAdmin.from("sync_runs").select("keywords_done,keywords_total,errors").eq("id", data.runId).single();
+    if (readError || !run) throw new Error(readError?.message ?? "Abruf nicht gefunden");
+    const complete = run.keywords_done >= run.keywords_total;
+    const errors = Array.isArray(run.errors) ? run.errors : [];
+    const status = !complete ? "incomplete" : errors.length ? "partial" : "success";
+    const { error } = await supabaseAdmin.from("sync_runs").update({
+      status,
+      finished_at: new Date().toISOString(),
+      fetched: data.fetched,
+      new_count: data.newCount,
+      updated_count: data.updated,
+    }).eq("id", data.runId);
+    if (error) throw new Error(error.message);
+    return { status };
   });
 
 export const loadJobDetail = createServerFn({ method: "POST" })

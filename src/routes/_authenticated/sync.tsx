@@ -86,7 +86,7 @@ function SyncPage() {
           <p className="mt-2 text-xs text-muted-foreground">Bitte Seite offen lassen. Anfragen werden bewusst verlangsamt, um die Schnittstelle zu schonen.</p>
         </div>
       )}
-       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+       <div className="grid gap-6">
         <div>
           <h2 className="mb-3 text-lg font-semibold">Letzte Abrufe</h2>
           <RunTable runs={runs.data ?? []} />
@@ -100,10 +100,10 @@ function SyncPage() {
             </ul>
           </div>
         </div>
-         <aside className="self-start rounded-lg border bg-card p-4 xl:sticky xl:top-6">
+          <aside className="rounded-lg border bg-card p-4">
           <h2 className="mb-3 font-semibold">Suchbegriffe ({kws.data?.filter((k) => k.active).length ?? 0} aktiv)</h2>
           <div className="mb-3 flex gap-2"><Input value={newTerm} onChange={(e) => setNewTerm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addTerm()} placeholder="Neuer Begriff" /><Button onClick={addTerm}>+</Button></div>
-           <div className="max-h-64 space-y-1 overflow-y-auto pr-1 text-sm xl:max-h-[360px]">
+            <div className="grid max-h-72 gap-x-6 overflow-y-auto pr-1 text-sm sm:grid-cols-2 xl:grid-cols-3">
             {(kws.data ?? []).map((k) => (
               <div key={k.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted">
                 <span className={k.active ? "" : "text-muted-foreground line-through"}>{k.term}</span>

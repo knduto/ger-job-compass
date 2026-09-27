@@ -44,7 +44,7 @@ export const syncCityRun = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { syncKeyword, recordKeyword, finishRun } = await import("./sync.server");
     const startedAt = new Date().toISOString();
-    const loc = { wo: data.city, umkreis: data.radiusKm || undefined };
+    const loc: { wo: string; umkreis?: number } = data.radiusKm ? { wo: data.city, umkreis: data.radiusKm } : { wo: data.city };
 
     let steps: (string | null)[];
     if (data.mode === "all") {

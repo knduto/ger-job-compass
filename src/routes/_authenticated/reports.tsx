@@ -30,6 +30,14 @@ const defaultFilters: ReportFilters = { city: "", region: "", field: "", keyword
 const defaultWeights = { volume: 5, growth: 3, remote: 2, permanent: 2, diversity: 3, language: 2 };
 const selectClass = "h-9 w-full rounded-md border bg-background px-2 text-sm";
 const weightLabels: Record<string, string> = { volume: "Stellenvolumen", growth: "Neue Stellen", remote: "Homeoffice", permanent: "Unbefristet", diversity: "Arbeitgebervielfalt", language: "Englisch zugänglich" };
+const weightHints: Record<string, string> = {
+  volume: "Wie viele aktive Stellen die Stadt insgesamt bietet — mehr Auswahl, mehr Chancen.",
+  growth: "Wie viele Stellen in den letzten 7 Tagen neu veröffentlicht wurden — Zeichen eines aktiven Markts.",
+  remote: "Anteil der Stellen mit Homeoffice-Option.",
+  permanent: "Anteil unbefristeter Verträge — mehr Jobsicherheit.",
+  diversity: "Wie viele verschiedene Arbeitgeber in der Stadt ausschreiben — weniger Abhängigkeit von einem einzelnen Arbeitgeber.",
+  language: "Anteil englisch zugänglicher Stellen unter den sprachlich analysierten Beschreibungen der Stadt.",
+};
 
 function Reports() {
   const reportFn = useServerFn(getReportData);

@@ -10,7 +10,7 @@ export function RunTable({ runs }: { runs: any[] }) {
           {runs.map((r) => (
             <tr key={r.id} className="border-t align-top">
               <td className="whitespace-nowrap px-3 py-2">{fmtDateTime(r.started_at)}</td>
-              <td className="px-3 py-2">{r.trigger === "daily" ? "Täglich" : "Manuell"}</td>
+              <td className="px-3 py-2">{r.trigger === "daily" ? "Täglich" : r.trigger === "city" ? "Stadt" : "Manuell"}</td>
               <td className="px-3 py-2"><Badge variant={r.status === "success" ? "default" : r.status === "running" ? "secondary" : "destructive"}>{r.status}</Badge></td>
               <td className="px-3 py-2 font-mono">{r.keywords_done}/{r.keywords_total}</td>
               <td className="px-3 py-2 font-mono">{fmt(r.requests)}</td>

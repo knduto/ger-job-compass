@@ -107,6 +107,27 @@ export const finishCityRun = createServerFn({ method: "POST" })
     return { status };
   });
 
+export const abandonCityRun = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    runId: z.string().uuid(),
+    reason: z.string().trim().min(1).max(500),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: run, error: readError } = await supabaseAdmin.from("sync_runs").select("errors,status").eq("id", data.runId).single();
+    if (readError || !run) throw new Error(readError?.message ?? "Abruf nicht gefunden");
+    if (run.status !== "running") return { status: run.status };
+    const errors = Array.isArray(run.errors) ? run.errors : [];
+    const { error } = await supabaseAdmin.from("sync_runs").update({
+      status: "incomplete",
+      finished_at: new Date().toISOString(),
+      errors: [...errors, data.reason],
+    }).eq("id", data.runId);
+    if (error) throw new Error(error.message);
+    return { status: "incomplete" };
+  });
+
 export const loadJobDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ refnr: z.string().min(3).max(120), refresh: z.boolean().optional() }).parse(d))

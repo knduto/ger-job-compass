@@ -20,3 +20,5 @@
 - Daily cron token is stored in vault as `daily_sync_token` (set via `set_daily_sync_token`, service_role only) and matches `LOVABLE_CRON_SECRET`.
 
 - Language classifications and daily market snapshots are evidence-based derivatives of stored Arbeitsagentur listings; vague German wording never receives an inferred CEFR level.
+- City-sync selection uses inline segmented buttons and a local error boundary so a control failure cannot replace the entire Live-Abruf page.
+- Global error handling preserves TanStack server-function responses and renders the standalone HTML error page only for document requests — RPC errors must remain catchable inside their calling section.

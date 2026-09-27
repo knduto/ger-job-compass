@@ -66,3 +66,13 @@ Lovable saves each stage as its own version, and I can't set the commit message 
 - Rollback files are documentation-first and are never run automatically.
 - `.env.example` lists only variable names (VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_PROJECT_ID) with no values.
 - This work makes no schema changes, so it needs no database confirmation.
+
+### 4.5 0006 app-side dependency (checked in code)
+- Browser reads and writes of keywords (Live-Abruf list, toggle, delete, reports) go through the per-user access rules, so they are correctly scoped.
+- Server sync paths still read every user's keywords with no owner filter: manual sync, city sync in keyword mode, the daily scheduled sync, and the keyword count. That is the pre-0006 pattern.
+- Impact today: none, because there is a single user. It will be recorded explicitly in the MIGRATIONS.md entry for 0006 and listed as an open item, with no code change in Stage 1.
+
+### 4.6 Review before each stage lands
+- Lovable saves each file change as a version immediately. There is no pre-commit review step.
+- Workaround (you choose): either (a) I post a stage's full content in chat and write it only after your "go", or (b) I build the stage in an isolated draft copy that reaches the main project only when you accept it.
+- Stage 1 starts once you approve this plan and pick (a) or (b).

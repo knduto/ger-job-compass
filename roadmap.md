@@ -16,7 +16,7 @@
 # Engineering process setup (each stage built in a draft, merged only after user accepts)
 
 - [x] Stage 1: rollback files for 0000–0006, MIGRATIONS.md, seed script (in draft)
-- [ ] Stage 2: README.md, SETUP.md + .env.example, STACK.md, REQUIREMENTS.md
+- [x] Stage 2: README.md, SETUP.md + .env.example, STACK.md, REQUIREMENTS.md (in draft)
 - [x] Stage 3: ARCHITECTURE.md, CHANGELOG.md
 - [ ] Stage 4: CONTRIBUTING.md, DEPLOYMENT-LOCAL.md (full local-host guide), AGENTS.md updates
 

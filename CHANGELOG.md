@@ -4,6 +4,19 @@ All notable changes to Smart-DE-Reise are documented here, in a style based on [
 
 **On dates**: `git log` for this repository shows nearly all commits (over 100) dated **2026-09-27**, with messages that are almost entirely non-descriptive (`Changes`, `Update plan`); only a handful of commits have descriptive messages, listed below with their actual commit dates. The one exception is the initial template commit, dated 2026-09-22. Because the vast majority of commits carry no useful message or distinguishing date, the entries below are **derived from `roadmap.md`'s completed items and from the schema history in `MIGRATIONS.md`** (which records a migration date of 2026-09-27 for every migration, 0000–0006), not from individual commit messages. Where a change can be tied to a specific dated commit, that commit hash and date are cited; otherwise the entry is dated "2026-09-27 (undated within day — derived from roadmap.md / MIGRATIONS.md, exact time-of-day sequence not verifiable from git history)".
 
+## 2026-09-28 — Two-step login, registration closed
+
+### Added
+- Two-step sign-in: password, then a 6-digit verification code sent by e-mail (valid 10 minutes, single use).
+- `login_codes` table (migration 0007) storing only hashed codes, server-only access.
+
+### Changed
+- Login screen is now a two-step flow with a dedicated code screen, expiry countdown and resend cooldown.
+
+### Removed
+- Public registration and the public password-reset entry point. Recovery links already sent still work.
+
+
 ## [Unreleased]
 
 Staged documentation rollout (each stage built and reviewed in its own draft):

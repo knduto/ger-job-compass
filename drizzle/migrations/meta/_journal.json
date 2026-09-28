@@ -50,6 +50,13 @@
       "when": 1790486216023,
       "tag": "0006_scope_search_keywords_to_owner",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790560407944,
+      "tag": "0007_create_login_codes",
+      "breakpoints": true
     }
   ]
 }

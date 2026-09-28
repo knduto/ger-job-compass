@@ -201,3 +201,12 @@ drizzle/
 - `MIGRATIONS.md` — full migration log, compatibility verdicts, and rollback files.
 - `README.md` — project description.
 - `roadmap.md` — staged documentation plan and open items (including OPEN-001).
+
+## Authentication (two-step, closed registration)
+
+- Public registration and the public password-reset entry point are closed. The login screen has no sign-up and no "Passwort vergessen?" link; `src/routes/reset-password.tsx` stays in place only so recovery links already in flight keep working.
+- Sign-in is two-step. Step 1 (`requestLoginCode` in `src/lib/mfa.functions.ts`) verifies the password server-side with a publishable-key client that never persists a session, then e-mails a 6-digit code through Lovable's managed email API.
+- Only the SHA-256 hash of the code (code + user id) is stored, in `public.login_codes`, with a 10-minute expiry, an attempt counter and a consumed marker. Codes are never returned to the browser.
+- Limits: at most 5 codes per user per hour, no new code within 45 seconds, hard fail after 5 wrong attempts. Failures return generic German messages that do not reveal whether an address exists.
+- Step 2 (`verifyLoginCode`) compares hashes with a timing-safe comparison, marks the code consumed and returns only a one-time token hash from the Auth admin API, which the browser exchanges for a session via `supabase.auth.verifyOtp`.
+- `login_codes` has RLS enabled with no policies and grants for `service_role` only, so it is reachable exclusively from the server.

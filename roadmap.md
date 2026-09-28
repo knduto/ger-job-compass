@@ -20,6 +20,15 @@
 - [x] Stage 3: ARCHITECTURE.md, CHANGELOG.md
 - [x] Stage 4: CONTRIBUTING.md, DEPLOYMENT-LOCAL.md (full local-host guide), AGENTS.md updates (in draft)
 
+# Two-step login (MFA) and lockdown
+
+- [x] Remove public registration and the public password-reset entry point from the login screen
+- [x] Two-step login: password, then a 6-digit code sent by e-mail (10 minutes, rate limited, hashed at rest)
+- [x] New `login_codes` table (0007) with rollback and migration log row
+- [ ] Apply auth settings (signups off, anonymous off, no auto-confirm, leaked-password check on) — blocked: must be done from the main project, not this draft
+- [ ] Set up the e-mail sender domain so login codes can actually be delivered — blocked: needs a domain you own
+- [ ] Verify the code screen end-to-end (code delivered, wrong code, successful sign-in) — blocked: the codes table only exists after this draft is accepted
+
 # Open items
 
 - [ ] OPEN-001 (from 0006): server sync paths read all users' keywords with no owner filter — daily sync (api/public/cron/daily-sync.ts), manual sync and city keyword mode (sync.functions.ts), keyword count (sync.server.ts). No impact with one user; fix needs confirmation before code change.

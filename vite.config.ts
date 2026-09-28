@@ -12,4 +12,21 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    resolve: {
+      alias: {
+        // React Email's htmlparser2 needs entities v4.5.0; nested v7 copies
+        // removed ./lib/decode.js, so pin every import to the hoisted copy.
+        "entities/lib/decode.js": path.resolve(
+          __dirname,
+          "node_modules/entities/lib/decode.js",
+        ),
+        "entities/lib/encode.js": path.resolve(
+          __dirname,
+          "node_modules/entities/lib/encode.js",
+        ),
+        entities: path.resolve(__dirname, "node_modules/entities"),
+      },
+    },
+  },
 });

@@ -118,7 +118,11 @@ function Explore() {
           </div>
           <label className="flex items-center justify-between">Nur Homeoffice <Switch checked={s.homeoffice} onCheckedChange={(v) => set({ homeoffice: v })} /></label>
           <label className="flex items-center justify-between">Nur mit Gehaltsangabe <Switch checked={s.salary} onCheckedChange={(v) => set({ salary: v })} /></label>
-          <label className="flex items-center justify-between">Abgelaufene zeigen <Switch checked={s.expired} onCheckedChange={(v) => set({ expired: v })} /></label>
+          <div className="space-y-1"><Label>Status</Label>
+            <select className={sel} value={s.status} onChange={(e) => set({ status: e.target.value as typeof s.status })}>
+              <option value="aktiv">Aktiv</option><option value="abgelaufen">Nur abgelaufene</option><option value="alle">Alle</option>
+            </select>
+          </div>
           <div className="space-y-1"><Label>Sortierung</Label>
             <select className={sel} value={s.sort} onChange={(e) => set({ sort: e.target.value })}>
               <option value="newest">Neueste zuerst</option><option value="oldest">Älteste zuerst</option><option value="salary">Höchstes Gehalt</option>

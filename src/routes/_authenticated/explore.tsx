@@ -23,7 +23,7 @@ const schema = z.object({
   homeoffice: fallback(z.boolean(), false).default(false),
   salary: fallback(z.boolean(), false).default(false),
   days: fallback(z.number(), 0).default(0),
-  expired: fallback(z.boolean(), false).default(false),
+  status: fallback(z.enum(["aktiv", "abgelaufen", "alle"]), "aktiv").default("aktiv"),
   sort: fallback(z.string(), "newest").default("newest"),
   page: fallback(z.number().int(), 1).default(1),
 });
@@ -58,7 +58,8 @@ function Explore() {
     queryKey: ["explore", s],
     queryFn: async () => {
       let q = supabase.from("jobs").select(JOB_LIST_COLS, { count: "exact" });
-      if (!s.expired) q = q.eq("expired", false);
+      if (s.status === "aktiv") q = q.eq("expired", false);
+      else if (s.status === "abgelaufen") q = q.eq("expired", true);
       if (s.q.trim()) q = q.ilike("title", `%${s.q.trim().slice(0, 100)}%`);
       if (s.city) q = q.eq("city", s.city);
       if (s.employer.trim()) q = q.ilike("employer", `%${s.employer.trim().slice(0, 100)}%`);

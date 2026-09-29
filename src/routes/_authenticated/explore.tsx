@@ -23,7 +23,7 @@ const schema = z.object({
   homeoffice: fallback(z.boolean(), false).default(false),
   salary: fallback(z.boolean(), false).default(false),
   days: fallback(z.number(), 0).default(0),
-  expired: fallback(z.boolean(), false).default(false),
+  status: fallback(z.enum(["aktiv", "abgelaufen", "alle"]), "aktiv").default("aktiv"),
   sort: fallback(z.string(), "newest").default("newest"),
   page: fallback(z.number().int(), 1).default(1),
 });
@@ -58,7 +58,8 @@ function Explore() {
     queryKey: ["explore", s],
     queryFn: async () => {
       let q = supabase.from("jobs").select(JOB_LIST_COLS, { count: "exact" });
-      if (!s.expired) q = q.eq("expired", false);
+      if (s.status === "aktiv") q = q.eq("expired", false);
+      else if (s.status === "abgelaufen") q = q.eq("expired", true);
       if (s.q.trim()) q = q.ilike("title", `%${s.q.trim().slice(0, 100)}%`);
       if (s.city) q = q.eq("city", s.city);
       if (s.employer.trim()) q = q.ilike("employer", `%${s.employer.trim().slice(0, 100)}%`);
@@ -117,7 +118,11 @@ function Explore() {
           </div>
           <label className="flex items-center justify-between">Nur Homeoffice <Switch checked={s.homeoffice} onCheckedChange={(v) => set({ homeoffice: v })} /></label>
           <label className="flex items-center justify-between">Nur mit Gehaltsangabe <Switch checked={s.salary} onCheckedChange={(v) => set({ salary: v })} /></label>
-          <label className="flex items-center justify-between">Abgelaufene zeigen <Switch checked={s.expired} onCheckedChange={(v) => set({ expired: v })} /></label>
+          <div className="space-y-1"><Label>Status</Label>
+            <select className={sel} value={s.status} onChange={(e) => set({ status: e.target.value as typeof s.status })}>
+              <option value="aktiv">Aktiv</option><option value="abgelaufen">Nur abgelaufene</option><option value="alle">Alle</option>
+            </select>
+          </div>
           <div className="space-y-1"><Label>Sortierung</Label>
             <select className={sel} value={s.sort} onChange={(e) => set({ sort: e.target.value })}>
               <option value="newest">Neueste zuerst</option><option value="oldest">Älteste zuerst</option><option value="salary">Höchstes Gehalt</option>

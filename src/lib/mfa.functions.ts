@@ -78,18 +78,23 @@ async function sendCodeEmail(to: string, code: string) {
   }
   const { sendLovableEmail } = await import("@lovable.dev/email-js");
   const { html, text } = codeEmail(code);
-  await sendLovableEmail(
+  const res = await sendLovableEmail(
     {
       to,
       from,
+      sender_domain: "notify.johnnduto.app",
       subject: "Dein Anmeldecode für Smart-DE-Reise",
       html,
       text,
-      purpose: "login_code",
+      purpose: "transactional",
       label: "login-code",
-    },
+      idempotency_key: `login-code-${createHash("sha256").update(`${to}:${code}`).digest("hex").slice(0, 32)}`,
+    } as Parameters<typeof sendLovableEmail>[0],
     { apiKey },
   );
+  if (res && (res as { sent?: boolean }).sent === false) {
+    throw new Error("Diese E-Mail-Adresse ist für den Versand gesperrt (z. B. nach Abmeldung oder Zustellfehler).");
+  }
 }
 
 export const requestLoginCode = createServerFn({ method: "POST" })

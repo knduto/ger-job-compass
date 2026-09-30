@@ -4,7 +4,8 @@ type CityRow = { city: string; active: number; new7: number; employers: number; 
 
 export async function downloadReportPdf(input: {
   filters: ReportFilters; total: number; analysed: number; generatedAt: string; cities: CityRow[];
-  language: { label: string; count: number }[]; topEmployers: [string, number][]; methodology: string[];
+  language: { label: string; count: number }[]; estimatedLanguage?: { label: string; count: number }[];
+  topEmployers: [string, number][]; methodology: string[];
 }) {
   const [{ jsPDF }, autoTableModule] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
   const autoTable = autoTableModule.default;

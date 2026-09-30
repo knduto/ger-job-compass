@@ -29,6 +29,11 @@
 - [ ] Set up the e-mail sender domain so login codes can actually be delivered — blocked: needs a domain you own
 - [ ] Verify the code screen end-to-end (code delivered, wrong code, successful sign-in) — blocked: the codes table only exists after this draft is accepted
 
+# Sprachanalyse in Masse
+
+- [x] Massenanalyse aller Stellen (Blöcke von 25, nie doppelt) mit Fortschritt, Pause und Stopp
+- [x] Geschätzte CEFR-Stufen (nur aus expliziten Formulierungen) plus Filter und Export
+
 # Open items
 
 - [ ] OPEN-001 (from 0006): server sync paths read all users' keywords with no owner filter — daily sync (api/public/cron/daily-sync.ts), manual sync and city keyword mode (sync.functions.ts), keyword count (sync.server.ts). No impact with one user; fix needs confirmation before code change.

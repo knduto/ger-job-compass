@@ -84,9 +84,13 @@ async function collectPending(admin: Admin, limit: number) {
       if (error) throw new Error(error.message);
       const chunk = (data ?? []).map((row: any) => row.refnr as string);
       if (!chunk.length) break;
-      const done = await admin.from("job_language_analysis").select("refnr").in("refnr", chunk);
-      if (done.error) throw new Error(done.error.message);
-      const doneSet = new Set((done.data ?? []).map((row: any) => row.refnr));
+      // Subtract in small slices: a single .in() with 1000 refnrs exceeds the request URL limit.
+      const doneSet = new Set<string>();
+      for (let i = 0; i < chunk.length; i += 150) {
+        const done = await admin.from("job_language_analysis").select("refnr").in("refnr", chunk.slice(i, i + 150));
+        if (done.error) throw new Error(done.error.message);
+        for (const row of done.data ?? []) doneSet.add(row.refnr as string);
+      }
       for (const refnr of chunk) {
         if (!doneSet.has(refnr)) pending.push(refnr);
         if (pending.length >= limit) break;

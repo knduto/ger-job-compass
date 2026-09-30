@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Download, FileSpreadsheet, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { IT_BERUFSFELDER } from "@/lib/it-fields";
-import { getReportData, processLanguageBatch, type ReportFilters } from "@/lib/reports.functions";
+import { getLanguageAnalysisStatus, getReportData, processLanguageBatch, type ReportFilters } from "@/lib/reports.functions";
 import { buildReportMetrics, employerKind, type ReportJob } from "@/lib/report-metrics";
 import { addTrackedCity, fetchAllCityStats, fetchTrackedCities, must, removeTrackedCity } from "@/lib/queries";
 
@@ -39,15 +39,54 @@ const weightHints: Record<string, string> = {
   language: "Anteil englisch zugänglicher Stellen unter den sprachlich analysierten Beschreibungen der Stadt.",
 };
 
+const ESTIMATED_OPTIONS: [string, string][] = [
+  ["est:C1-C2", "Geschätzt C1–C2 (verhandlungssicher)"], ["est:B2-C1", "Geschätzt B2–C1 (fließend)"],
+  ["est:B1-B2", "Geschätzt B1–B2 (gute Deutschkenntnisse)"], ["est:A2", "Geschätzt A2 (Grundkenntnisse)"],
+];
+
 function Reports() {
   const reportFn = useServerFn(getReportData);
   const analyseFn = useServerFn(processLanguageBatch);
+  const statusFn = useServerFn(getLanguageAnalysisStatus);
   const [filters, setFilters] = useState(defaultFilters);
   const [weights, setWeights] = useState(defaultWeights);
   const [selected, setSelected] = useState<string[]>([]);
   const [detailCity, setDetailCity] = useState<string | null>(null);
   const [showScoreInfo, setShowScoreInfo] = useState(false);
-  const [processing, setProcessing] = useState(false);
+  const [runState, setRunState] = useState<"idle" | "running" | "paused">("idle");
+  const runControl = useRef<"run" | "pause" | "stop">("run");
+  const [progress, setProgress] = useState<{ analysed: number; pending: number; total: number } | null>(null);
+  const status = useQuery({ queryKey: ["language-status"], queryFn: () => statusFn({ data: {} as any }) });
+  const live = progress ?? status.data ?? null;
+  const livePct = live && live.total ? 100 * live.analysed / live.total : 0;
+
+  const control = () => runControl.current as "run" | "pause" | "stop";
+  async function runBulk() {
+    runControl.current = "run";
+    setRunState("running");
+    try {
+      for (;;) {
+        if (control() === "stop") break;
+        if (control() === "pause") { setRunState("paused"); return; }
+        const result = await analyseFn({ data: { limit: 25 } });
+        if (result.errors.length) toast.error(result.errors[0]);
+        setProgress((current) => {
+          const total = current?.total ?? live?.total ?? result.remaining + result.processed;
+          return { total, pending: result.remaining, analysed: Math.max(0, total - result.remaining) };
+        });
+        // Stop instead of looping forever when a block makes no progress at all.
+        if (result.remaining === 0 || result.requested === 0 || result.processed === 0) break;
+      }
+      toast.success("Massenanalyse abgeschlossen");
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      if (control() !== "pause") {
+        setRunState("idle");
+        await Promise.all([status.refetch(), report.refetch()]);
+      }
+    }
+  }
   const cities = useQuery({ queryKey: ["city_stats"], queryFn: fetchAllCityStats });
   const tracked = useQuery({ queryKey: ["tracked_cities"], queryFn: fetchTrackedCities });
   const [cityPick, setCityPick] = useState("");
@@ -72,17 +111,17 @@ function Reports() {
   }, {});
   const trends = Object.values(snapshotSeries).map((r: any) => ({ ...r, englishPct: r.analysed ? +(100 * r.english / r.analysed).toFixed(1) : 0 }));
   const update = <K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) => setFilters((current) => ({ ...current, [key]: value }));
-  const methodology = ["Quelle: Bundesagentur für Arbeit Jobsuche API; keine erfundenen oder extern ergänzten Stellen.", "A1–C2 wird nur vergeben, wenn das Niveau ausdrücklich in der Stellenbeschreibung steht.", "Vage Angaben wie „gute Deutschkenntnisse“ bleiben als „Deutsch erforderlich, Niveau unklar“ separat.", `Sprachabdeckung: ${metrics.analysed} von ${rows.length} gefilterten Stellen (${analysedPct.toFixed(1)} %).`, "Agenturhinweise beruhen ausschließlich auf klaren Begriffen im Arbeitgebernamen; alle anderen bleiben unklassifiziert.", "Historische Trends entstehen erst aus täglichen vollständigen Abrufen; ältere Punkte werden nicht rückwirkend erfunden.", "Alle Analysen basieren auf gespeicherten Datenbankinhalten; beim Anzeigen oder Herunterladen der Berichte werden keine Live-API-Aufrufe durchgeführt."];
+  const methodology = ["Quelle: Bundesagentur für Arbeit Jobsuche API; keine erfundenen oder extern ergänzten Stellen.", "A1–C2 wird nur vergeben, wenn das Niveau ausdrücklich in der Stellenbeschreibung steht.", "Geschätzte Niveaus (z. B. „Geschätzt B2–C1“) sind heuristische Ableitungen ausdrücklicher Formulierungen wie „verhandlungssicher“ oder „fließend“ in den gespeicherten Beschreibungen — sie ersetzen kein explizites Niveau und werden nie erfunden.", "Vage Angaben ohne passende Formulierung bleiben als „Deutsch erforderlich, Niveau unklar“ separat.", `Sprachabdeckung: ${metrics.analysed} von ${rows.length} gefilterten Stellen (${analysedPct.toFixed(1)} %).`, "Agenturhinweise beruhen ausschließlich auf klaren Begriffen im Arbeitgebernamen; alle anderen bleiben unklassifiziert.", "Historische Trends entstehen erst aus täglichen vollständigen Abrufen; ältere Punkte werden nicht rückwirkend erfunden.", "Alle Analysen basieren auf gespeicherten Datenbankinhalten; beim Anzeigen oder Herunterladen der Berichte werden keine Live-API-Aufrufe durchgeführt."];
 
   async function pdf() {
     if (!rows.length) return;
     const { downloadReportPdf } = await import("@/lib/report-pdf");
-    await downloadReportPdf({ filters, total: rows.length, analysed: metrics.analysed, generatedAt: report.data?.generatedAt ?? new Date().toISOString(), cities: metrics.cities, language: metrics.language, topEmployers: metrics.employerCounts.slice(0, 15), methodology });
+    await downloadReportPdf({ filters, total: rows.length, analysed: metrics.analysed, generatedAt: report.data?.generatedAt ?? new Date().toISOString(), cities: metrics.cities, language: metrics.language, estimatedLanguage: metrics.estimatedLanguage, topEmployers: metrics.employerCounts.slice(0, 15), methodology });
   }
   async function excel() {
     if (!rows.length) return;
     const { downloadReportXlsx } = await import("@/lib/report-xlsx");
-    await downloadReportXlsx({ filters, rows, cities: metrics.cities, language: metrics.language, employers: metrics.employerCounts, snapshots: report.data?.snapshots ?? [], generatedAt: report.data?.generatedAt ?? new Date().toISOString() });
+    await downloadReportXlsx({ filters, rows, cities: metrics.cities, language: metrics.language, estimatedLanguage: metrics.estimatedLanguage, employers: metrics.employerCounts, snapshots: report.data?.snapshots ?? [], generatedAt: report.data?.generatedAt ?? new Date().toISOString() });
   }
 
   return <>
@@ -97,7 +136,17 @@ function Reports() {
         <Filter label="Zeitraum"><select className={selectClass} value={filters.days} onChange={(e) => update("days", Number(e.target.value))}><option value={0}>Gesamter Zeitraum</option><option value={7}>7 Tage</option><option value={30}>30 Tage</option><option value={90}>90 Tage</option></select></Filter>
         <Filter label="Vertrag"><select className={selectClass} value={filters.contract} onChange={(e) => update("contract", e.target.value)}><option value="">Alle</option><option value="UNBEFRISTET">Unbefristet</option><option value="BEFRISTET">Befristet</option></select></Filter>
         <Filter label="Arbeitszeit"><select className={selectClass} value={filters.worktime} onChange={(e) => update("worktime", e.target.value as ReportFilters["worktime"])}><option value="">Alle</option><option value="full">Vollzeit</option><option value="part">Teilzeit</option></select></Filter>
-        <Filter label="Sprache"><select className={selectClass} value={filters.language} onChange={(e) => update("language", e.target.value)}><option value="">Alle</option><option value="required">Deutsch erforderlich</option><option value="english">Englisch zugänglich</option>{["A1","A2","B1","B2","C1","C2"].map((v) => <option key={v}>{v}</option>)}<option value="pending">Nicht analysiert</option></select></Filter>
+        <Filter label="Sprache"><select className={selectClass} value={filters.language} onChange={(e) => update("language", e.target.value)}>
+          <option value="">Alle</option>
+          <option value="required">Deutsch erforderlich</option>
+          <optgroup label="Explizit genannt">{["A1","A2","B1","B2","C1","C2"].map((v) => <option key={v} value={v}>{v} (explizit)</option>)}</optgroup>
+          <optgroup label="Geschätzt (heuristisch)">{ESTIMATED_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</optgroup>
+          <optgroup label="Weitere">
+            <option value="unclear">Deutsch erforderlich, Niveau unklar</option>
+            <option value="english">Englisch zugänglich</option>
+            <option value="pending">Noch nicht analysiert</option>
+          </optgroup>
+        </select></Filter>
         <Toggle label="Homeoffice" checked={filters.homeoffice} onChange={(v) => update("homeoffice", v)} /><Toggle label="Mit Gehalt" checked={filters.salary} onChange={(v) => update("salary", v)} />
         <Button variant="outline" className="self-end" onClick={() => setFilters(defaultFilters)}>Filter zurücksetzen</Button>
       </div>
@@ -109,8 +158,23 @@ function Reports() {
         {analysedPct < 50 && <p className="mt-3 border-l-2 border-warning pl-3 text-sm text-muted-foreground">Die Sprachauswertung ist noch nicht repräsentativ. Ergebnisse beziehen sich nur auf {metrics.analysed} analysierte Beschreibungen.</p>}
       </section>
       <section className="mb-8">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold">Deutsch & Zugänglichkeit</h2><p className="text-sm text-muted-foreground">Explizite Nachweise aus Stellenbeschreibungen, ohne geschätzte CEFR-Stufen.</p></div><Button variant="outline" disabled={processing} onClick={async () => { setProcessing(true); try { const r = await analyseFn({ data: { limit: 20 } }); toast.success(`${r.processed} Beschreibungen analysiert`); await report.refetch(); } catch (e) { toast.error((e as Error).message); } finally { setProcessing(false); } }}><RefreshCw className={`mr-2 h-4 w-4 ${processing ? "animate-spin" : ""}`} />Nächste 20 analysieren</Button></div>
-        <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]"><div className="overflow-hidden rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr><th className="px-3 py-2 text-left">Kategorie</th><th className="px-3 py-2 text-right">Stellen</th></tr></thead><tbody>{metrics.language.map((r) => <tr className="border-t" key={r.label}><td className="px-3 py-2">{r.label}</td><td className="px-3 py-2 text-right font-mono">{fmt(r.count)}</td></tr>)}</tbody></table></div><div className="h-72 rounded-lg border bg-card p-4"><ResponsiveContainer width="100%" height="100%"><BarChart data={metrics.cities.slice(0, 12)}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/><XAxis dataKey="city" fontSize={10}/><YAxis fontSize={10}/><Tooltip/><Bar dataKey="englishPct" name="Englisch zugänglich %" fill="var(--chart-2)"/></BarChart></ResponsiveContainer></div></div>
+        <div className="mb-3"><h2 className="text-lg font-semibold">Deutsch & Zugänglichkeit</h2><p className="text-sm text-muted-foreground">Explizite Nachweise aus Stellenbeschreibungen; geschätzte Niveaus stehen separat darunter.</p></div>
+        <div className="mb-4 rounded-lg border bg-card p-4" data-testid="bulk-runner">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold">Massenanalyse der Sprachanforderungen</h3>
+              <p className="text-xs text-muted-foreground">{live ? `${fmt(live.analysed)} analysiert · ${fmt(live.pending)} offen · ${livePct.toFixed(1)} % von ${fmt(live.total)}` : "Zählerstand wird geladen…"}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" disabled={runState === "running" || (live?.pending === 0)} onClick={runBulk}><RefreshCw className={`mr-2 h-4 w-4 ${runState === "running" ? "animate-spin" : ""}`} />Massenanalyse starten</Button>
+              <Button variant="outline" disabled={runState !== "running"} onClick={() => { runControl.current = "pause"; }}>Pause</Button>
+              <Button variant="outline" disabled={runState === "idle"} onClick={() => { runControl.current = "stop"; setRunState("idle"); void Promise.all([status.refetch(), report.refetch()]); }}>Stopp</Button>
+            </div>
+          </div>
+          <div className="h-2 overflow-hidden rounded bg-muted"><div className="h-2 rounded bg-accent transition-all" style={{ width: `${Math.min(100, livePct)}%` }} /></div>
+          <p className="mt-2 text-xs text-muted-foreground">Läuft in Blöcken von 25 Stellen; bereits analysierte Stellen werden nie erneut abgerufen. {runState === "paused" ? "Pausiert." : runState === "running" ? "Läuft…" : ""}</p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]"><div className="overflow-hidden rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr><th className="px-3 py-2 text-left">Kategorie</th><th className="px-3 py-2 text-right">Stellen</th></tr></thead><tbody>{metrics.language.map((r) => <tr className="border-t" key={r.label}><td className="px-3 py-2">{r.label}</td><td className="px-3 py-2 text-right font-mono">{fmt(r.count)}</td></tr>)}<tr className="border-t-2 bg-muted/50"><td className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground" colSpan={2}>Geschätzt (heuristisch, aus expliziten Formulierungen)</td></tr>{metrics.estimatedLanguage.map((r) => <tr className="border-t italic text-muted-foreground" key={r.label}><td className="px-3 py-2">{r.label}</td><td className="px-3 py-2 text-right font-mono">{fmt(r.count)}</td></tr>)}</tbody></table></div><div className="h-72 rounded-lg border bg-card p-4"><ResponsiveContainer width="100%" height="100%"><BarChart data={metrics.cities.slice(0, 12)}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/><XAxis dataKey="city" fontSize={10}/><YAxis fontSize={10}/><Tooltip/><Bar dataKey="englishPct" name="Englisch zugänglich %" fill="var(--chart-2)"/></BarChart></ResponsiveContainer></div></div>
       </section>
       <section className="mb-8">
         <div className="mb-3 flex items-center gap-2"><h2 className="text-lg font-semibold">Städteranking</h2><Button variant="ghost" size="sm" onClick={() => setShowScoreInfo((v) => !v)}>{showScoreInfo ? "Erklärung ausblenden" : "Wie wird der Score berechnet?"}</Button></div>

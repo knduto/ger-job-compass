@@ -43,7 +43,17 @@ export const getReportData = createServerFn({ method: "POST" })
     }
     const analysisMap = new Map(analyses.map((item) => [item.refnr, item]));
     const joined = rows.map((row) => ({ ...row, language: analysisMap.get(row.refnr) ?? null }));
-    const filtered = data.language ? joined.filter((row) => data.language === "pending" ? !row.language : data.language === "required" ? row.language?.german_required === true : data.language === "english" ? row.language?.english_accessible === true : row.language?.cefr_level === data.language) : joined;
+    const matchLanguage = (row: any) => {
+      const lang = row.language;
+      const key = data.language;
+      if (key === "pending") return !lang;
+      if (key === "required") return lang?.german_required === true;
+      if (key === "english") return lang?.english_accessible === true;
+      if (key === "unclear") return lang?.german_required === true && !lang?.cefr_level && !lang?.estimated_cefr;
+      if (key.startsWith("est:")) return lang?.estimated_cefr === key.slice(4);
+      return lang?.cefr_level === key;
+    };
+    const filtered = data.language ? joined.filter(matchLanguage) : joined;
     const snapshotResult = await context.supabase.from("market_snapshots").select("*").order("snapshot_date", { ascending: true }).limit(1000);
     if (snapshotResult.error) throw new Error(snapshotResult.error.message);
     return { rows: filtered, snapshots: snapshotResult.data ?? [], generatedAt: new Date().toISOString() };
@@ -51,9 +61,17 @@ export const getReportData = createServerFn({ method: "POST" })
 
 export const processLanguageBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ limit: z.number().int().min(1).max(50).default(20) }).parse(data))
+  .inputValidator((data) => z.object({ limit: z.number().int().min(1).max(25).default(20) }).parse(data))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { analyseLanguageBatch } = await import("./language-analysis.server");
     return analyseLanguageBatch(supabaseAdmin, data.limit);
+  });
+
+export const getLanguageAnalysisStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { countPendingAnalysis } = await import("./language-analysis.server");
+    return countPendingAnalysis(supabaseAdmin);
   });

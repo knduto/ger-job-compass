@@ -141,7 +141,8 @@ export const loadJobDetail = createServerFn({ method: "POST" })
       const row = { refnr: data.refnr, description: raw.stellenangebotsBeschreibung ?? null, raw, fetched_at: new Date().toISOString() };
       await supabaseAdmin.from("job_details").upsert(row, { onConflict: "refnr" });
       const { classifyLanguage } = await import("./language-analysis.server");
-      await supabaseAdmin.from("job_language_analysis").upsert({ refnr: data.refnr, ...classifyLanguage(row.description) }, { onConflict: "refnr" });
+      // estimated_cefr exists once migration 0008 is applied; generated types lag behind here.
+      await supabaseAdmin.from("job_language_analysis").upsert({ refnr: data.refnr, ...classifyLanguage(row.description) } as any, { onConflict: "refnr" });
       return { description: row.description, raw, fetched_at: row.fetched_at, error: null };
     } catch (e) {
       console.error("detail fetch failed", e);

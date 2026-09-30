@@ -4,6 +4,24 @@ type Admin = any;
 
 const CEFR = ["C2", "C1", "B2", "B1", "A2", "A1"] as const;
 const clip = (value: string) => value.replace(/\s+/g, " ").trim().slice(0, 180);
+export const EXTRACTION_VERSION = 2;
+export const ESTIMATED_LEVELS = ["C1-C2", "B2-C1", "B1-B2", "A2"] as const;
+export type EstimatedLevel = (typeof ESTIMATED_LEVELS)[number];
+
+const ESTIMATE_RULES: [EstimatedLevel, RegExp][] = [
+  ["C1-C2", /verhandlungssicher|muttersprachlich|muttersprache|(?:exzellente|ausgezeichnete)\s+deutschkenntnisse|native\s+speaker/i],
+  ["B2-C1", /flie(?:ß|ss)end|sehr\s+gute\s+deutschkenntnisse|business\s+fluent/i],
+  ["B1-B2", /gute\s+deutschkenntnisse|konversationssicher|conversational\s+german/i],
+  ["A2", /grundkenntnisse|basiskenntnisse|basic\s+german/i],
+];
+
+/** Heuristic estimate — only ever derived from an explicit phrase in the stored description. */
+export function estimateCefr(text: string | null | undefined): EstimatedLevel | null {
+  const value = (text ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  if (!value) return null;
+  for (const [level, pattern] of ESTIMATE_RULES) if (pattern.test(value)) return level;
+  return null;
+}
 
 export function classifyLanguage(description: string | null | undefined) {
   const text = (description ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
@@ -26,39 +44,83 @@ export function classifyLanguage(description: string | null | undefined) {
   if (germanMention && evidence.length === 0) addMatches(/.{0,45}(?:deutsch(?:kenntnisse)?|german).{0,75}/gi);
 
   const classification = cefr ? "cefr" : germanNotRequired || englishAccessible ? "english_accessible" : optional ? "german_optional" : germanMention ? "german_unspecified" : "unknown";
+  const estimated = cefr || germanNotRequired ? null : estimateCefr(text);
   return {
     classification,
     cefr_level: cefr,
+    estimated_cefr: estimated,
     german_required: cefr ? true : germanNotRequired ? false : germanMention ? !optional : null,
     english_accessible: englishAccessible || germanNotRequired,
     evidence: [...new Set(evidence)],
-    extraction_version: 1,
+    extraction_version: EXTRACTION_VERSION,
     analysed_at: new Date().toISOString(),
   };
 }
 
-export async function analyseLanguageBatch(admin: Admin, limit = 20) {
-  const { data: analysed } = await admin.from("job_language_analysis").select("refnr").eq("extraction_version", 1).limit(100000);
-  const done = new Set((analysed ?? []).map((row: any) => row.refnr));
-  const { data: jobs, error } = await admin.from("jobs").select("refnr").eq("expired", false).order("published_from", { ascending: false, nullsFirst: false }).limit(1000);
+const PAGE = 1000;
+
+async function countRows(admin: Admin, table: string, apply?: (query: any) => any) {
+  let query = admin.from(table).select("refnr", { count: "exact", head: true });
+  if (apply) query = apply(query);
+  const { count, error } = await query;
   if (error) throw new Error(error.message);
-  const pending = (jobs ?? []).filter((job: any) => !done.has(job.refnr)).slice(0, limit);
+  return count ?? 0;
+}
+
+export async function countPendingAnalysis(admin: Admin) {
+  const total = await countRows(admin, "jobs");
+  const analysed = await countRows(admin, "job_language_analysis");
+  return { pending: Math.max(0, total - analysed), analysed, total };
+}
+
+/** Paged left-anti-join: page through jobs, subtract refnrs already analysed, until `limit` pending are found. */
+async function collectPending(admin: Admin, limit: number) {
+  const pending: string[] = [];
+  for (const expired of [false, true]) {
+    if (pending.length >= limit) break;
+    for (let from = 0; pending.length < limit; from += PAGE) {
+      const { data, error } = await admin.from("jobs").select("refnr").eq("expired", expired)
+        .order("published_from", { ascending: false, nullsFirst: false }).range(from, from + PAGE - 1);
+      if (error) throw new Error(error.message);
+      const chunk = (data ?? []).map((row: any) => row.refnr as string);
+      if (!chunk.length) break;
+      // Subtract in small slices: a single .in() with 1000 refnrs exceeds the request URL limit.
+      const doneSet = new Set<string>();
+      for (let i = 0; i < chunk.length; i += 150) {
+        const done = await admin.from("job_language_analysis").select("refnr").in("refnr", chunk.slice(i, i + 150));
+        if (done.error) throw new Error(done.error.message);
+        for (const row of done.data ?? []) doneSet.add(row.refnr as string);
+      }
+      for (const refnr of chunk) {
+        if (!doneSet.has(refnr)) pending.push(refnr);
+        if (pending.length >= limit) break;
+      }
+      if (chunk.length < PAGE) break;
+    }
+  }
+  return pending;
+}
+
+export async function analyseLanguageBatch(admin: Admin, limit = 20) {
+  const size = Math.max(1, Math.min(25, Math.floor(limit)));
+  const pending = await collectPending(admin, size);
   let processed = 0;
   const errors: string[] = [];
-  for (const job of pending) {
+  for (const refnr of pending) {
     try {
-      const raw = await jobDetails(job.refnr);
+      const raw = await jobDetails(refnr);
       const description = raw.stellenangebotsBeschreibung ?? null;
-      const detailError = await admin.from("job_details").upsert({ refnr: job.refnr, description, raw, fetched_at: new Date().toISOString() }, { onConflict: "refnr" });
+      const detailError = await admin.from("job_details").upsert({ refnr, description, raw, fetched_at: new Date().toISOString() }, { onConflict: "refnr" });
       if (detailError.error) throw new Error(detailError.error.message);
       const result = classifyLanguage(description);
-      const analysisError = await admin.from("job_language_analysis").upsert({ refnr: job.refnr, ...result }, { onConflict: "refnr" });
+      const analysisError = await admin.from("job_language_analysis").upsert({ refnr, ...result }, { onConflict: "refnr" });
       if (analysisError.error) throw new Error(analysisError.error.message);
       processed++;
     } catch (error) {
-      errors.push(`${job.refnr}: ${(error as Error).message}`);
+      errors.push(`${refnr}: ${(error as Error).message}`);
     }
     await politeDelay();
   }
-  return { processed, requested: pending.length, errors: errors.slice(0, 5) };
+  const { pending: remaining } = await countPendingAnalysis(admin);
+  return { processed, requested: pending.length, remaining, errors: errors.slice(0, 5) };
 }

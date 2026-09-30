@@ -3,7 +3,7 @@ export type ReportJob = {
   berufsfelder: string[]; keywords: string[]; contract: string | null; fulltime: boolean | null; parttime: boolean | null;
   homeoffice: boolean | null; salary_type: string | null; salary_from: number | null; salary_to: number | null;
   published_from: string | null; first_seen: string; last_seen: string; expired: boolean;
-  language: { classification: string; cefr_level: string | null; german_required: boolean | null; english_accessible: boolean | null; evidence: string[] } | null;
+  language: { classification: string; cefr_level: string | null; estimated_cefr?: string | null; german_required: boolean | null; english_accessible: boolean | null; evidence: string[] } | null;
 };
 
 const agencyPattern = /personal|zeitarbeit|arbeitnehmerüberlass|recruit|staffing|manpower|randstad|adecco|akkodis|hays|ferchau|persona service|expertum|tempton|orizon/i;
@@ -47,6 +47,8 @@ export function buildReportMetrics(rows: ReportJob[], weights: Record<string, nu
     ["Keine klare Sprachaussage", (j) => j.language?.classification === "unknown"], ["Noch nicht analysiert", (j) => !j.language],
   ];
   const language = categories.map(([label, match]) => ({ label, count: rows.filter(match).length }));
-  return { cities, employerCounts, language, analysed: rows.filter((job) => job.language).length,
+  const estimatedLabels: [string, string][] = [["C1-C2", "C1–C2 (verhandlungssicher)"], ["B2-C1", "B2–C1 (fließend)"], ["B1-B2", "B1–B2 (gute Kenntnisse)"], ["A2", "A2 (Grundkenntnisse)"]];
+  const estimatedLanguage = estimatedLabels.map(([key, label]) => ({ label: `Geschätzt: ${label}`, count: rows.filter((j) => j.language?.estimated_cefr === key).length }));
+  return { cities, employerCounts, language, estimatedLanguage, analysed: rows.filter((job) => job.language).length,
     agency: rows.filter((job) => job.employer && employerKind(job.employer).startsWith("Agentur")).length };
 }

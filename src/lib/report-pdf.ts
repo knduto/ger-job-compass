@@ -4,7 +4,8 @@ type CityRow = { city: string; active: number; new7: number; employers: number; 
 
 export async function downloadReportPdf(input: {
   filters: ReportFilters; total: number; analysed: number; generatedAt: string; cities: CityRow[];
-  language: { label: string; count: number }[]; topEmployers: [string, number][]; methodology: string[];
+  language: { label: string; count: number }[]; estimatedLanguage?: { label: string; count: number }[];
+  topEmployers: [string, number][]; methodology: string[];
 }) {
   const [{ jsPDF }, autoTableModule] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
   const autoTable = autoTableModule.default;
@@ -23,6 +24,12 @@ export async function downloadReportPdf(input: {
   doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Deutschanforderungen", margin, y);
   autoTable(doc, { startY: y + 4, head: [["Kategorie", "Stellen"]], body: input.language.map((r) => [r.label, r.count]), styles: { fontSize: 9 }, headStyles: { fillColor: [39, 47, 58] } });
   y = (doc as any).lastAutoTable.finalY + 10;
+  if (input.estimatedLanguage?.length) {
+    if (y > 220) { doc.addPage(); y = 18; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("Geschätzte Niveaus (heuristisch)", margin, y);
+    autoTable(doc, { startY: y + 4, head: [["Kategorie", "Stellen"]], body: input.estimatedLanguage.map((r) => [r.label, r.count]), styles: { fontSize: 9 }, headStyles: { fillColor: [76, 63, 40] } });
+    y = (doc as any).lastAutoTable.finalY + 10;
+  }
   if (y > 220) { doc.addPage(); y = 18; }
   doc.setFont("helvetica", "bold"); doc.text("Top-Arbeitgeber", margin, y);
   autoTable(doc, { startY: y + 4, head: [["Arbeitgeber", "Stellen"]], body: input.topEmployers.slice(0, 15), styles: { fontSize: 9 }, headStyles: { fillColor: [39, 47, 58] } });

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { IT_BERUFSFELDER } from "@/lib/it-fields";
-import { getReportData, processLanguageBatch, type ReportFilters } from "@/lib/reports.functions";
+import { getLanguageAnalysisStatus, getReportData, processLanguageBatch, type ReportFilters } from "@/lib/reports.functions";
 import { buildReportMetrics, employerKind, type ReportJob } from "@/lib/report-metrics";
 import { addTrackedCity, fetchAllCityStats, fetchTrackedCities, must, removeTrackedCity } from "@/lib/queries";
 
@@ -39,15 +39,52 @@ const weightHints: Record<string, string> = {
   language: "Anteil englisch zugänglicher Stellen unter den sprachlich analysierten Beschreibungen der Stadt.",
 };
 
+const ESTIMATED_OPTIONS: [string, string][] = [
+  ["est:C1-C2", "Geschätzt C1–C2 (verhandlungssicher)"], ["est:B2-C1", "Geschätzt B2–C1 (fließend)"],
+  ["est:B1-B2", "Geschätzt B1–B2 (gute Deutschkenntnisse)"], ["est:A2", "Geschätzt A2 (Grundkenntnisse)"],
+];
+
 function Reports() {
   const reportFn = useServerFn(getReportData);
   const analyseFn = useServerFn(processLanguageBatch);
+  const statusFn = useServerFn(getLanguageAnalysisStatus);
   const [filters, setFilters] = useState(defaultFilters);
   const [weights, setWeights] = useState(defaultWeights);
   const [selected, setSelected] = useState<string[]>([]);
   const [detailCity, setDetailCity] = useState<string | null>(null);
   const [showScoreInfo, setShowScoreInfo] = useState(false);
-  const [processing, setProcessing] = useState(false);
+  const [runState, setRunState] = useState<"idle" | "running" | "paused">("idle");
+  const runControl = useRef<"run" | "pause" | "stop">("run");
+  const [progress, setProgress] = useState<{ analysed: number; pending: number; total: number } | null>(null);
+  const status = useQuery({ queryKey: ["language-status"], queryFn: () => statusFn({ data: {} as any }) });
+  const live = progress ?? status.data ?? null;
+  const livePct = live && live.total ? 100 * live.analysed / live.total : 0;
+
+  async function runBulk() {
+    runControl.current = "run";
+    setRunState("running");
+    try {
+      for (;;) {
+        if (runControl.current === "stop") break;
+        if (runControl.current === "pause") { setRunState("paused"); return; }
+        const result = await analyseFn({ data: { limit: 25 } });
+        if (result.errors.length) toast.error(result.errors[0]);
+        setProgress((current) => {
+          const total = current?.total ?? live?.total ?? result.remaining + result.processed;
+          return { total, pending: result.remaining, analysed: Math.max(0, total - result.remaining) };
+        });
+        if (result.remaining === 0 || result.requested === 0) break;
+      }
+      toast.success("Massenanalyse abgeschlossen");
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      if (runControl.current !== "pause") {
+        setRunState("idle");
+        await Promise.all([status.refetch(), report.refetch()]);
+      }
+    }
+  }
   const cities = useQuery({ queryKey: ["city_stats"], queryFn: fetchAllCityStats });
   const tracked = useQuery({ queryKey: ["tracked_cities"], queryFn: fetchTrackedCities });
   const [cityPick, setCityPick] = useState("");

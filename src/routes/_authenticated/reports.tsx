@@ -109,17 +109,17 @@ function Reports() {
   }, {});
   const trends = Object.values(snapshotSeries).map((r: any) => ({ ...r, englishPct: r.analysed ? +(100 * r.english / r.analysed).toFixed(1) : 0 }));
   const update = <K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) => setFilters((current) => ({ ...current, [key]: value }));
-  const methodology = ["Quelle: Bundesagentur für Arbeit Jobsuche API; keine erfundenen oder extern ergänzten Stellen.", "A1–C2 wird nur vergeben, wenn das Niveau ausdrücklich in der Stellenbeschreibung steht.", "Vage Angaben wie „gute Deutschkenntnisse“ bleiben als „Deutsch erforderlich, Niveau unklar“ separat.", `Sprachabdeckung: ${metrics.analysed} von ${rows.length} gefilterten Stellen (${analysedPct.toFixed(1)} %).`, "Agenturhinweise beruhen ausschließlich auf klaren Begriffen im Arbeitgebernamen; alle anderen bleiben unklassifiziert.", "Historische Trends entstehen erst aus täglichen vollständigen Abrufen; ältere Punkte werden nicht rückwirkend erfunden.", "Alle Analysen basieren auf gespeicherten Datenbankinhalten; beim Anzeigen oder Herunterladen der Berichte werden keine Live-API-Aufrufe durchgeführt."];
+  const methodology = ["Quelle: Bundesagentur für Arbeit Jobsuche API; keine erfundenen oder extern ergänzten Stellen.", "A1–C2 wird nur vergeben, wenn das Niveau ausdrücklich in der Stellenbeschreibung steht.", "Geschätzte Niveaus (z. B. „Geschätzt B2–C1“) sind heuristische Ableitungen ausdrücklicher Formulierungen wie „verhandlungssicher“ oder „fließend“ in den gespeicherten Beschreibungen — sie ersetzen kein explizites Niveau und werden nie erfunden.", "Vage Angaben ohne passende Formulierung bleiben als „Deutsch erforderlich, Niveau unklar“ separat.", `Sprachabdeckung: ${metrics.analysed} von ${rows.length} gefilterten Stellen (${analysedPct.toFixed(1)} %).`, "Agenturhinweise beruhen ausschließlich auf klaren Begriffen im Arbeitgebernamen; alle anderen bleiben unklassifiziert.", "Historische Trends entstehen erst aus täglichen vollständigen Abrufen; ältere Punkte werden nicht rückwirkend erfunden.", "Alle Analysen basieren auf gespeicherten Datenbankinhalten; beim Anzeigen oder Herunterladen der Berichte werden keine Live-API-Aufrufe durchgeführt."];
 
   async function pdf() {
     if (!rows.length) return;
     const { downloadReportPdf } = await import("@/lib/report-pdf");
-    await downloadReportPdf({ filters, total: rows.length, analysed: metrics.analysed, generatedAt: report.data?.generatedAt ?? new Date().toISOString(), cities: metrics.cities, language: metrics.language, topEmployers: metrics.employerCounts.slice(0, 15), methodology });
+    await downloadReportPdf({ filters, total: rows.length, analysed: metrics.analysed, generatedAt: report.data?.generatedAt ?? new Date().toISOString(), cities: metrics.cities, language: metrics.language, estimatedLanguage: metrics.estimatedLanguage, topEmployers: metrics.employerCounts.slice(0, 15), methodology });
   }
   async function excel() {
     if (!rows.length) return;
     const { downloadReportXlsx } = await import("@/lib/report-xlsx");
-    await downloadReportXlsx({ filters, rows, cities: metrics.cities, language: metrics.language, employers: metrics.employerCounts, snapshots: report.data?.snapshots ?? [], generatedAt: report.data?.generatedAt ?? new Date().toISOString() });
+    await downloadReportXlsx({ filters, rows, cities: metrics.cities, language: metrics.language, estimatedLanguage: metrics.estimatedLanguage, employers: metrics.employerCounts, snapshots: report.data?.snapshots ?? [], generatedAt: report.data?.generatedAt ?? new Date().toISOString() });
   }
 
   return <>

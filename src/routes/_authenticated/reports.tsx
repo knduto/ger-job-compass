@@ -74,7 +74,8 @@ function Reports() {
           const total = current?.total ?? live?.total ?? result.remaining + result.processed;
           return { total, pending: result.remaining, analysed: Math.max(0, total - result.remaining) };
         });
-        if (result.remaining === 0 || result.requested === 0) break;
+        // Stop instead of looping forever when a block makes no progress at all.
+        if (result.remaining === 0 || result.requested === 0 || result.processed === 0) break;
       }
       toast.success("Massenanalyse abgeschlossen");
     } catch (error) {

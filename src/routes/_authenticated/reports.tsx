@@ -134,7 +134,17 @@ function Reports() {
         <Filter label="Zeitraum"><select className={selectClass} value={filters.days} onChange={(e) => update("days", Number(e.target.value))}><option value={0}>Gesamter Zeitraum</option><option value={7}>7 Tage</option><option value={30}>30 Tage</option><option value={90}>90 Tage</option></select></Filter>
         <Filter label="Vertrag"><select className={selectClass} value={filters.contract} onChange={(e) => update("contract", e.target.value)}><option value="">Alle</option><option value="UNBEFRISTET">Unbefristet</option><option value="BEFRISTET">Befristet</option></select></Filter>
         <Filter label="Arbeitszeit"><select className={selectClass} value={filters.worktime} onChange={(e) => update("worktime", e.target.value as ReportFilters["worktime"])}><option value="">Alle</option><option value="full">Vollzeit</option><option value="part">Teilzeit</option></select></Filter>
-        <Filter label="Sprache"><select className={selectClass} value={filters.language} onChange={(e) => update("language", e.target.value)}><option value="">Alle</option><option value="required">Deutsch erforderlich</option><option value="english">Englisch zugänglich</option>{["A1","A2","B1","B2","C1","C2"].map((v) => <option key={v}>{v}</option>)}<option value="pending">Nicht analysiert</option></select></Filter>
+        <Filter label="Sprache"><select className={selectClass} value={filters.language} onChange={(e) => update("language", e.target.value)}>
+          <option value="">Alle</option>
+          <option value="required">Deutsch erforderlich</option>
+          <optgroup label="Explizit genannt">{["A1","A2","B1","B2","C1","C2"].map((v) => <option key={v} value={v}>{v} (explizit)</option>)}</optgroup>
+          <optgroup label="Geschätzt (heuristisch)">{ESTIMATED_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</optgroup>
+          <optgroup label="Weitere">
+            <option value="unclear">Deutsch erforderlich, Niveau unklar</option>
+            <option value="english">Englisch zugänglich</option>
+            <option value="pending">Noch nicht analysiert</option>
+          </optgroup>
+        </select></Filter>
         <Toggle label="Homeoffice" checked={filters.homeoffice} onChange={(v) => update("homeoffice", v)} /><Toggle label="Mit Gehalt" checked={filters.salary} onChange={(v) => update("salary", v)} />
         <Button variant="outline" className="self-end" onClick={() => setFilters(defaultFilters)}>Filter zurücksetzen</Button>
       </div>

@@ -60,13 +60,14 @@ function Reports() {
   const live = progress ?? status.data ?? null;
   const livePct = live && live.total ? 100 * live.analysed / live.total : 0;
 
+  const control = () => runControl.current as "run" | "pause" | "stop";
   async function runBulk() {
     runControl.current = "run";
     setRunState("running");
     try {
       for (;;) {
-        if (runControl.current === "stop") break;
-        if (runControl.current === "pause") { setRunState("paused"); return; }
+        if (control() === "stop") break;
+        if (control() === "pause") { setRunState("paused"); return; }
         const result = await analyseFn({ data: { limit: 25 } });
         if (result.errors.length) toast.error(result.errors[0]);
         setProgress((current) => {
@@ -79,7 +80,7 @@ function Reports() {
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
-      if (runControl.current !== "pause") {
+      if (control() !== "pause") {
         setRunState("idle");
         await Promise.all([status.refetch(), report.refetch()]);
       }

@@ -105,22 +105,54 @@ export async function analyseLanguageBatch(admin: Admin, limit = 20) {
   const size = Math.max(1, Math.min(25, Math.floor(limit)));
   const pending = await collectPending(admin, size);
   let processed = 0;
+  let unavailable = 0;
   const errors: string[] = [];
   for (const refnr of pending) {
     try {
-      const raw = await jobDetails(refnr);
-      const description = raw.stellenangebotsBeschreibung ?? null;
-      const detailError = await admin.from("job_details").upsert({ refnr, description, raw, fetched_at: new Date().toISOString() }, { onConflict: "refnr" });
-      if (detailError.error) throw new Error(detailError.error.message);
+      // Reuse an already stored description: no need to call the agency again.
+      const cached = await admin.from("job_details").select("description").eq("refnr", refnr).maybeSingle();
+      if (cached.error) throw new Error(cached.error.message);
+      let description: string | null = cached.data?.description ?? null;
+
+      if (description === null) {
+        const raw = await jobDetails(refnr);
+        description = raw.stellenangebotsBeschreibung ?? null;
+        const detailError = await admin.from("job_details").upsert({ refnr, description, raw, fetched_at: new Date().toISOString() }, { onConflict: "refnr" });
+        if (detailError.error) throw new Error(detailError.error.message);
+        await politeDelay();
+      }
+
       const result = classifyLanguage(description);
       const analysisError = await admin.from("job_language_analysis").upsert({ refnr, ...result }, { onConflict: "refnr" });
       if (analysisError.error) throw new Error(analysisError.error.message);
       processed++;
     } catch (error) {
+      if ((error as any)?.notFound) {
+        // Posting removed at the agency: record it as permanently handled so it never re-queues.
+        const now = new Date().toISOString();
+        const detail = await admin.from("job_details").upsert(
+          { refnr, description: null, raw: { not_found: true, status: 404, code: "STELLENANGEBOT_NICHT_GEFUNDEN" }, fetched_at: now },
+          { onConflict: "refnr" },
+        );
+        const analysis = await admin.from("job_language_analysis").upsert(
+          {
+            refnr, classification: "unknown", cefr_level: null, estimated_cefr: null,
+            german_required: null, english_accessible: null,
+            evidence: ["Arbeitsagentur: Stellenangebot nicht mehr verfügbar (404)"],
+            extraction_version: EXTRACTION_VERSION, analysed_at: now,
+          },
+          { onConflict: "refnr" },
+        );
+        if (detail.error || analysis.error) errors.push(`${refnr}: ${(detail.error ?? analysis.error)!.message}`);
+        else unavailable++;
+        await politeDelay();
+        continue;
+      }
       errors.push(`${refnr}: ${(error as Error).message}`);
+      await politeDelay();
     }
-    await politeDelay();
   }
   const { pending: remaining } = await countPendingAnalysis(admin);
-  return { processed, requested: pending.length, remaining, errors: errors.slice(0, 5) };
+  return { processed, unavailable, requested: pending.length, remaining, errors: errors.slice(0, 5) };
 }
+

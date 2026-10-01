@@ -32,6 +32,7 @@ export function salaryText(j: Pick<JobListItem, "salary_from" | "salary_to" | "s
 
 export function JobRow({ job, action }: { job: JobListItem; action?: React.ReactNode }) {
   const sal = salaryText(job);
+  const lang = jobLanguage(job);
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-3 last:border-0 hover:bg-muted/50">
       <div className="min-w-0 flex-1">
@@ -46,8 +47,13 @@ export function JobRow({ job, action }: { job: JobListItem; action?: React.React
           {job.fulltime && <Badge variant="outline">Vollzeit</Badge>}
           {job.parttime && <Badge variant="outline">Teilzeit</Badge>}
           {sal && <Badge className="bg-accent text-accent-foreground">{sal}</Badge>}
+          {lang?.cefr_level && <Badge variant="secondary">{lang.cefr_level} (explizit)</Badge>}
+          {!lang?.cefr_level && lang?.estimated_cefr && <Badge variant="outline">{lang.estimated_cefr.replace("-", "–")} (geschätzt)</Badge>}
+          {lang?.english_accessible && <Badge variant="secondary">Englisch zugänglich</Badge>}
+          {lang?.german_required && !lang.cefr_level && !lang.estimated_cefr && <Badge variant="outline">Deutsch erforderlich</Badge>}
         </div>
       </div>
+
       <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
         <span>veröff. {fmtDate(job.published_from)}</span>
         {action}

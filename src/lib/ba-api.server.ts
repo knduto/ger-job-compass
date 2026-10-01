@@ -5,6 +5,15 @@ const HEADERS = { "X-API-KEY": "jobboerse-jobsuche", Accept: "application/json" 
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** The posting no longer exists at the agency (taken down / closed). Not a failure. */
+export class BaNotFoundError extends Error {
+  readonly notFound = true;
+  constructor(message: string) {
+    super(message);
+    this.name = "BaNotFoundError";
+  }
+}
+
 export async function baFetch(path: string, attempt = 0): Promise<any> {
   const res = await fetch(`${BASE}${path}`, { headers: HEADERS });
   if (res.status === 429 || res.status >= 500) {
@@ -15,10 +24,14 @@ export async function baFetch(path: string, attempt = 0): Promise<any> {
   }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
+    if (res.status === 404 || body.includes("STELLENANGEBOT_NICHT_GEFUNDEN")) {
+      throw new BaNotFoundError(`Arbeitsagentur 404: Stellenangebot nicht gefunden`);
+    }
     throw new Error(`Arbeitsagentur ${res.status}: ${body.slice(0, 200)}`);
   }
   return res.json();
 }
+
 
 export type BaSearchParams = {
   was?: string;

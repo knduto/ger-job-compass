@@ -56,6 +56,7 @@ function Reports() {
   const [runState, setRunState] = useState<"idle" | "running" | "paused">("idle");
   const runControl = useRef<"run" | "pause" | "stop">("run");
   const [progress, setProgress] = useState<{ analysed: number; pending: number; total: number } | null>(null);
+  const [unavailable, setUnavailable] = useState(0);
   const status = useQuery({ queryKey: ["language-status"], queryFn: () => statusFn({ data: {} as any }) });
   const live = progress ?? status.data ?? null;
   const livePct = live && live.total ? 100 * live.analysed / live.total : 0;
@@ -70,12 +71,14 @@ function Reports() {
         if (control() === "pause") { setRunState("paused"); return; }
         const result = await analyseFn({ data: { limit: 25 } });
         if (result.errors.length) toast.error(result.errors[0]);
+        if (result.unavailable) setUnavailable((n) => n + result.unavailable);
         setProgress((current) => {
           const total = current?.total ?? live?.total ?? result.remaining + result.processed;
           return { total, pending: result.remaining, analysed: Math.max(0, total - result.remaining) };
         });
         // Stop instead of looping forever when a block makes no progress at all.
-        if (result.remaining === 0 || result.requested === 0 || result.processed === 0) break;
+        // Removed postings count as progress: they are permanently recorded.
+        if (result.remaining === 0 || result.requested === 0 || result.processed + result.unavailable === 0) break;
       }
       toast.success("Massenanalyse abgeschlossen");
     } catch (error) {
@@ -87,6 +90,7 @@ function Reports() {
       }
     }
   }
+
   const cities = useQuery({ queryKey: ["city_stats"], queryFn: fetchAllCityStats });
   const tracked = useQuery({ queryKey: ["tracked_cities"], queryFn: fetchTrackedCities });
   const [cityPick, setCityPick] = useState("");

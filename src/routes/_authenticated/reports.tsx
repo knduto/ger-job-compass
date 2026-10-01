@@ -167,7 +167,7 @@ function Reports() {
           <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold">Massenanalyse der Sprachanforderungen</h3>
-              <p className="text-xs text-muted-foreground">{live ? `${fmt(live.analysed)} analysiert · ${fmt(live.pending)} offen · ${livePct.toFixed(1)} % von ${fmt(live.total)}` : "Zählerstand wird geladen…"}</p>
+              <p className="text-xs text-muted-foreground">{live ? `${fmt(live.analysed)} analysiert · ${fmt(live.pending)} offen · ${livePct.toFixed(1)} % von ${fmt(live.total)}${unavailable ? ` · ${fmt(unavailable)} nicht mehr verfügbar` : ""}` : "Zählerstand wird geladen…"}</p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" disabled={runState === "running" || (live?.pending === 0)} onClick={runBulk}><RefreshCw className={`mr-2 h-4 w-4 ${runState === "running" ? "animate-spin" : ""}`} />Massenanalyse starten</Button>

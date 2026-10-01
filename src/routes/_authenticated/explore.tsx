@@ -66,7 +66,16 @@ function Explore() {
   const res = useQuery({
     queryKey: ["explore", s],
     queryFn: async () => {
-      let q = supabase.from("jobs").select(JOB_LIST_COLS, { count: "exact" });
+      const lang = s.language;
+      const join = lang === "pending" ? "!left" : lang ? "!inner" : "";
+      let q = supabase.from("jobs").select(`${JOB_LIST_COLS},job_language_analysis${join}(${LANG_COLS})`, { count: "exact" });
+      if (lang === "pending") q = q.is("job_language_analysis", null);
+      else if (lang === "required") q = q.eq("job_language_analysis.german_required", true);
+      else if (lang === "english") q = q.eq("job_language_analysis.english_accessible", true);
+      else if (lang === "optional") q = q.eq("job_language_analysis.classification", "german_optional");
+      else if (lang === "unclear") q = q.eq("job_language_analysis.german_required", true).is("job_language_analysis.cefr_level", null).is("job_language_analysis.estimated_cefr", null);
+      else if (lang.startsWith("est:")) q = q.eq("job_language_analysis.estimated_cefr", lang.slice(4));
+      else if (lang) q = q.eq("job_language_analysis.cefr_level", lang);
       if (s.status === "aktiv") q = q.eq("expired", false);
       else if (s.status === "abgelaufen") q = q.eq("expired", true);
       if (s.q.trim()) q = q.ilike("title", `%${s.q.trim().slice(0, 100)}%`);

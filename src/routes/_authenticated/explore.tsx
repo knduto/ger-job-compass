@@ -111,6 +111,20 @@ function Explore() {
               {(cities.data ?? []).map((c) => <option key={c.city} value={c.city!}>{c.city} ({c.active_jobs})</option>)}
             </select>
           </div>
+          <div className="space-y-1"><Label>Sprache</Label>
+            <select className={sel} value={s.language} onChange={(e) => set({ language: e.target.value })}>
+              <option value="">Alle</option>
+              <option value="required">Deutsch erforderlich</option>
+              <optgroup label="Explizit genannt">{CEFR_LEVELS.map((v) => <option key={v} value={v}>{v} (explizit)</option>)}</optgroup>
+              <optgroup label="Geschätzt (heuristisch)">{ESTIMATED_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</optgroup>
+              <optgroup label="Weitere">
+                <option value="unclear">Deutsch erforderlich, Niveau unklar</option>
+                <option value="optional">Deutsch (optional)</option>
+                <option value="english">Englisch zugänglich</option>
+                <option value="pending">Noch nicht analysiert</option>
+              </optgroup>
+            </select>
+          </div>
           <div className="space-y-2"><Label>IT-Berufsfeld</Label>
             {IT_BERUFSFELDER.map((f) => (
               <label key={f} className="flex items-start gap-2">

@@ -33,6 +33,9 @@
 
 - [x] Massenanalyse aller Stellen (Blöcke von 25, nie doppelt) mit Fortschritt, Pause und Stopp
 - [x] Geschätzte CEFR-Stufen (nur aus expliziten Formulierungen) plus Filter und Export
+- [x] Entfernte Stellen (Arbeitsagentur 404) werden als "nicht mehr verfügbar" dauerhaft verbucht statt als Fehler zu blockieren
+- [x] Gespeicherte Beschreibungen werden wiederverwendet statt erneut abgerufen
+- [x] Sprachfilter und Sprach-Badges auf der Seite "Jobs erkunden"
 
 # Open items
 

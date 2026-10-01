@@ -20,6 +20,7 @@ const schema = z.object({
   fields: fallback(z.string().array(), []).default([]),
   contract: fallback(z.string(), "").default(""),
   worktime: fallback(z.string(), "").default(""),
+  language: fallback(z.string(), "").default(""),
   homeoffice: fallback(z.boolean(), false).default(false),
   salary: fallback(z.boolean(), false).default(false),
   days: fallback(z.number(), 0).default(0),
@@ -27,6 +28,14 @@ const schema = z.object({
   sort: fallback(z.string(), "newest").default("newest"),
   page: fallback(z.number().int(), 1).default(1),
 });
+
+const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+const ESTIMATED_OPTIONS: [string, string][] = [
+  ["est:C1-C2", "Geschätzt C1–C2 (verhandlungssicher)"], ["est:B2-C1", "Geschätzt B2–C1 (fließend)"],
+  ["est:B1-B2", "Geschätzt B1–B2 (gute Deutschkenntnisse)"], ["est:A2", "Geschätzt A2 (Grundkenntnisse)"],
+];
+const LANG_COLS = "classification,cefr_level,estimated_cefr,german_required,english_accessible";
+
 
 export const Route = createFileRoute("/_authenticated/explore")({
   validateSearch: zodValidator(schema),
@@ -57,7 +66,16 @@ function Explore() {
   const res = useQuery({
     queryKey: ["explore", s],
     queryFn: async () => {
-      let q = supabase.from("jobs").select(JOB_LIST_COLS, { count: "exact" });
+      const lang = s.language;
+      const join = lang === "pending" ? "!left" : lang ? "!inner" : "";
+      let q = supabase.from("jobs").select(`${JOB_LIST_COLS},job_language_analysis${join}(${LANG_COLS})`, { count: "exact" });
+      if (lang === "pending") q = q.is("job_language_analysis", null);
+      else if (lang === "required") q = q.eq("job_language_analysis.german_required", true);
+      else if (lang === "english") q = q.eq("job_language_analysis.english_accessible", true);
+      else if (lang === "optional") q = q.eq("job_language_analysis.classification", "german_optional");
+      else if (lang === "unclear") q = q.eq("job_language_analysis.german_required", true).is("job_language_analysis.cefr_level", null).is("job_language_analysis.estimated_cefr", null);
+      else if (lang.startsWith("est:")) q = q.eq("job_language_analysis.estimated_cefr", lang.slice(4));
+      else if (lang) q = q.eq("job_language_analysis.cefr_level", lang);
       if (s.status === "aktiv") q = q.eq("expired", false);
       else if (s.status === "abgelaufen") q = q.eq("expired", true);
       if (s.q.trim()) q = q.ilike("title", `%${s.q.trim().slice(0, 100)}%`);
@@ -91,6 +109,20 @@ function Explore() {
             <select className={sel} value={s.city} onChange={(e) => set({ city: e.target.value })}>
               <option value="">Alle Städte</option>
               {(cities.data ?? []).map((c) => <option key={c.city} value={c.city!}>{c.city} ({c.active_jobs})</option>)}
+            </select>
+          </div>
+          <div className="space-y-1"><Label>Sprache</Label>
+            <select className={sel} value={s.language} onChange={(e) => set({ language: e.target.value })}>
+              <option value="">Alle</option>
+              <option value="required">Deutsch erforderlich</option>
+              <optgroup label="Explizit genannt">{CEFR_LEVELS.map((v) => <option key={v} value={v}>{v} (explizit)</option>)}</optgroup>
+              <optgroup label="Geschätzt (heuristisch)">{ESTIMATED_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</optgroup>
+              <optgroup label="Weitere">
+                <option value="unclear">Deutsch erforderlich, Niveau unklar</option>
+                <option value="optional">Deutsch (optional)</option>
+                <option value="english">Englisch zugänglich</option>
+                <option value="pending">Noch nicht analysiert</option>
+              </optgroup>
             </select>
           </div>
           <div className="space-y-2"><Label>IT-Berufsfeld</Label>

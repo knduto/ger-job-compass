@@ -20,6 +20,7 @@ const schema = z.object({
   fields: fallback(z.string().array(), []).default([]),
   contract: fallback(z.string(), "").default(""),
   worktime: fallback(z.string(), "").default(""),
+  language: fallback(z.string(), "").default(""),
   homeoffice: fallback(z.boolean(), false).default(false),
   salary: fallback(z.boolean(), false).default(false),
   days: fallback(z.number(), 0).default(0),
@@ -27,6 +28,14 @@ const schema = z.object({
   sort: fallback(z.string(), "newest").default("newest"),
   page: fallback(z.number().int(), 1).default(1),
 });
+
+const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+const ESTIMATED_OPTIONS: [string, string][] = [
+  ["est:C1-C2", "Geschätzt C1–C2 (verhandlungssicher)"], ["est:B2-C1", "Geschätzt B2–C1 (fließend)"],
+  ["est:B1-B2", "Geschätzt B1–B2 (gute Deutschkenntnisse)"], ["est:A2", "Geschätzt A2 (Grundkenntnisse)"],
+];
+const LANG_COLS = "classification,cefr_level,estimated_cefr,german_required,english_accessible";
+
 
 export const Route = createFileRoute("/_authenticated/explore")({
   validateSearch: zodValidator(schema),

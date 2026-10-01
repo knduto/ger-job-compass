@@ -99,6 +99,7 @@ export type Database = {
           cefr_level: string | null
           classification: string
           english_accessible: boolean | null
+          estimated_cefr: string | null
           evidence: string[]
           extraction_version: number
           german_required: boolean | null
@@ -109,6 +110,7 @@ export type Database = {
           cefr_level?: string | null
           classification?: string
           english_accessible?: boolean | null
+          estimated_cefr?: string | null
           evidence?: string[]
           extraction_version?: number
           german_required?: boolean | null
@@ -119,6 +121,7 @@ export type Database = {
           cefr_level?: string | null
           classification?: string
           english_accessible?: boolean | null
+          estimated_cefr?: string | null
           evidence?: string[]
           extraction_version?: number
           german_required?: boolean | null

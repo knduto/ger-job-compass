@@ -57,6 +57,13 @@
       "when": 1790560407944,
       "tag": "0007_create_login_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790820216132,
+      "tag": "0008_add_estimated_cefr",
+      "breakpoints": true
     }
   ]
 }

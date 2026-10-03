@@ -18,18 +18,18 @@ const schema = z.object({
   q: fallback(z.string(), "").default(""),
   city: fallback(z.string(), "").default(""),
   employer: fallback(z.string(), "").default(""),
-  fields: fallback(z.string().array(), []).default([]),
+  fields: fallback(z.preprocess((v) => (typeof v === "string" ? (v ? [v] : []) : v), z.string().array()), []).default([]),
   contract: fallback(z.string(), "").default(""),
   worktime: fallback(z.string(), "").default(""),
   language: fallback(z.string(), "").default(""),
   visa: fallback(z.string(), "").default(""),
-  homeoffice: fallback(z.boolean(), false).default(false),
-  salary: fallback(z.boolean(), false).default(false),
-  days: fallback(z.number(), 0).default(0),
+  homeoffice: fallback(z.preprocess((v) => v === true || v === "true", z.boolean()), false).default(false),
+  salary: fallback(z.preprocess((v) => v === true || v === "true", z.boolean()), false).default(false),
+  days: fallback(z.coerce.number().int().min(0), 0).default(0),
   status: fallback(z.enum(["aktiv", "abgelaufen", "alle"]), "aktiv").default("aktiv"),
   sort: fallback(z.string(), "newest").default("newest"),
-  page: fallback(z.number().int(), 1).default(1),
-  per: fallback(z.number().int(), 25).default(25),
+  page: fallback(z.coerce.number().int().min(1), 1).default(1),
+  per: fallback(z.coerce.number().int(), 25).default(25),
 });
 
 const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
@@ -149,8 +149,8 @@ function Explore() {
       <PageHeader title="Jobs erkunden" subtitle={`${fmt(res.data?.count)} Treffer in deiner Datenbank`} />
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="space-y-4 rounded-lg border bg-card p-4 text-sm">
-          <div className="space-y-1"><Label>Titel enthält</Label><Input defaultValue={s.q} onKeyDown={(e) => e.key === "Enter" && set({ q: e.currentTarget.value })} onBlur={(e) => e.currentTarget.value !== s.q && set({ q: e.currentTarget.value })} placeholder="z.B. Service Manager" /></div>
-          <div className="space-y-1"><Label>Arbeitgeber enthält</Label><Input defaultValue={s.employer} onKeyDown={(e) => e.key === "Enter" && set({ employer: e.currentTarget.value })} onBlur={(e) => e.currentTarget.value !== s.employer && set({ employer: e.currentTarget.value })} /></div>
+          <div className="space-y-1"><Label>Titel enthält</Label><Input key={`q-${s.q}`} defaultValue={s.q} onKeyDown={(e) => e.key === "Enter" && set({ q: e.currentTarget.value })} placeholder="z.B. Service Manager (Enter)" /></div>
+          <div className="space-y-1"><Label>Arbeitgeber enthält</Label><Input key={`e-${s.employer}`} defaultValue={s.employer} onKeyDown={(e) => e.key === "Enter" && set({ employer: e.currentTarget.value })} placeholder="Enter zum Anwenden" /></div>
           <div className="space-y-1"><Label>Stadt</Label>
             <select className={sel} value={s.city} onChange={(e) => set({ city: e.target.value })}>
               <option value="">Alle Städte</option>

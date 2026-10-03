@@ -20,6 +20,7 @@
 - Daily cron token is stored in vault as `daily_sync_token` (set via `set_daily_sync_token`, service_role only) and matches `LOVABLE_CRON_SECRET`.
 
 - Language classifications and daily market snapshots are evidence-based derivatives of stored Arbeitsagentur listings; vague German wording never receives an inferred CEFR level.
+- Visa/work-permit feasibility (`job_visa_feasibility`, `src/lib/visa-feasibility.server.ts`) is an evidence-based derivative of stored descriptions: a status is set only from a matching, non-negated phrase with its exact excerpt stored; precedence restricted > work_permit_required > international_friendly > unspecified; agency 404s are stored as unspecified with flag `unavailable` so they are never retried.
 - City-sync selection uses inline segmented buttons and a local error boundary so a control failure cannot replace the entire Live-Abruf page.
 - Global error handling preserves TanStack server-function responses and renders the standalone HTML error page only for document requests — RPC errors must remain catchable inside their calling section.
 

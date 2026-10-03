@@ -42,6 +42,14 @@
 - [x] Keep results visible while the next page loads
 - [x] Pager above and below the list: first/last, numbered pages, jump-to-page, 25/50/100 per page, scroll to top
 
+# Chancenkarte visa / work-permit scanner (in draft)
+
+- [x] Evidence-based, negation-aware scanner with unit tests
+- [x] Bulk runner (25 per block, unavailable counted) and status table on Reports
+- [x] Job detail card, Explore filter and list badge
+- [ ] Database table goes live when this draft is accepted; then run the scanner and verify Explore/job detail with real data
+- [ ] Copy staged migration into drizzle/migrations/0009 and add drizzle/rollbacks/0009 — blocked: drizzle folder is read-only in this draft
+
 # Open items
 
 - [ ] OPEN-001 (from 0006): server sync paths read all users' keywords with no owner filter — daily sync (api/public/cron/daily-sync.ts), manual sync and city keyword mode (sync.functions.ts), keyword count (sync.server.ts). No impact with one user; fix needs confirmation before code change.

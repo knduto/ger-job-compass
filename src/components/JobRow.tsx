@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { CONTRACT_LABELS } from "@/lib/it-fields";
 import { fmt, fmtDate } from "./AppShell";
+import { VISA_BADGE_CLASS, VISA_STATUS_LABELS } from "@/lib/visa-labels";
 
 export type JobLanguage = {
   classification?: string | null; cefr_level: string | null; estimated_cefr: string | null;
@@ -14,7 +15,14 @@ export type JobListItem = {
   salary_type: string | null; salary_from: number | null; salary_to: number | null; published_from: string | null;
   first_seen: string; last_seen: string; expired: boolean; external_url: string | null;
   job_language_analysis?: JobLanguage | JobLanguage[] | null;
+  job_visa_feasibility?: JobVisa | JobVisa[] | null;
 };
+export type JobVisa = { status: string; flags: string[] };
+export function jobVisa(job: JobListItem): JobVisa | null {
+  const v = job.job_visa_feasibility;
+  if (!v) return null;
+  return Array.isArray(v) ? v[0] ?? null : v;
+}
 
 /** Normalises the embedded relation (PostgREST may return an object or a one-element array). */
 export function jobLanguage(job: JobListItem): JobLanguage | null {
@@ -33,6 +41,7 @@ export function salaryText(j: Pick<JobListItem, "salary_from" | "salary_to" | "s
 export function JobRow({ job, action }: { job: JobListItem; action?: React.ReactNode }) {
   const sal = salaryText(job);
   const lang = jobLanguage(job);
+  const visa = jobVisa(job);
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-3 last:border-0 hover:bg-muted/50">
       <div className="min-w-0 flex-1">
@@ -50,6 +59,7 @@ export function JobRow({ job, action }: { job: JobListItem; action?: React.React
           {lang?.cefr_level && <Badge variant="secondary">{lang.cefr_level} (explizit)</Badge>}
           {!lang?.cefr_level && lang?.estimated_cefr && <Badge variant="outline">{lang.estimated_cefr.replace("-", "–")} (geschätzt)</Badge>}
           {lang?.english_accessible && <Badge variant="secondary">Englisch zugänglich</Badge>}
+          {visa && visa.status !== "unspecified" && <Badge className={VISA_BADGE_CLASS[visa.status]}>{VISA_STATUS_LABELS[visa.status]}</Badge>}
           {lang?.german_required && !lang.cefr_level && !lang.estimated_cefr && <Badge variant="outline">Deutsch erforderlich</Badge>}
         </div>
       </div>

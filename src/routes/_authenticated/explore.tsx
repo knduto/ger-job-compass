@@ -22,6 +22,7 @@ const schema = z.object({
   contract: fallback(z.string(), "").default(""),
   worktime: fallback(z.string(), "").default(""),
   language: fallback(z.string(), "").default(""),
+  visa: fallback(z.string(), "").default(""),
   homeoffice: fallback(z.boolean(), false).default(false),
   salary: fallback(z.boolean(), false).default(false),
   days: fallback(z.number(), 0).default(0),
@@ -109,7 +110,11 @@ function Explore() {
     queryFn: async () => {
       const lang = s.language;
       const join = lang === "pending" ? "!left" : lang ? "!inner" : "";
-      let q = supabase.from("jobs").select(`${JOB_LIST_COLS},job_language_analysis${join}(${LANG_COLS})`, { count: "exact" });
+      const visa = s.visa;
+      const vjoin = visa === "pending" ? "!left" : visa ? "!inner" : "";
+      let q: any = supabase.from("jobs").select(`${JOB_LIST_COLS},job_language_analysis${join}(${LANG_COLS}),job_visa_feasibility${vjoin}(status,flags)`, { count: "exact" });
+      if (visa === "pending") q = q.is("job_visa_feasibility", null);
+      else if (visa) q = q.eq("job_visa_feasibility.status", visa);
       if (lang === "pending") q = q.is("job_language_analysis", null);
       else if (lang === "required") q = q.eq("job_language_analysis.german_required", true);
       else if (lang === "english") q = q.eq("job_language_analysis.english_accessible", true);
@@ -133,7 +138,7 @@ function Explore() {
       else if (s.sort === "oldest") q = q.order("published_from", { ascending: true });
       else q = q.order("published_from", { ascending: false, nullsFirst: false });
       q = q.range((page - 1) * PER, page * PER - 1);
-      const r = await must(q);
+      const r: any = await must(q);
       return { rows: (r.data ?? []) as unknown as JobListItem[], count: r.count ?? 0 };
     },
   });
@@ -164,6 +169,16 @@ function Explore() {
                 <option value="english">Englisch zugänglich</option>
                 <option value="pending">Noch nicht analysiert</option>
               </optgroup>
+            </select>
+          </div>
+          <div className="space-y-1"><Label>Visum / Arbeitserlaubnis</Label>
+            <select className={sel} value={s.visa} onChange={(e) => set({ visa: e.target.value })}>
+              <option value="">Alle</option>
+              <option value="international_friendly">International offen</option>
+              <option value="work_permit_required">Arbeitserlaubnis vorausgesetzt</option>
+              <option value="restricted">Eingeschränkt</option>
+              <option value="unspecified">Keine Angabe</option>
+              <option value="pending">Noch nicht analysiert</option>
             </select>
           </div>
           <div className="space-y-2"><Label>IT-Berufsfeld</Label>

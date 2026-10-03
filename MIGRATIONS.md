@@ -22,6 +22,7 @@ Migrations live in `drizzle/migrations/`. Hand-written rollbacks live in `drizzl
 | 2026-09-27 | `0006_scope_search_keywords_to_owner.sql` | Scope keywords to their owner | `search_keywords.user_id` added, backfilled to first user, then `NOT NULL` + default `auth.uid()`; open policies replaced by owner policies | Flagged — `NOT NULL` set after backfill (safe with one user) and policy replacement hides other users' keywords from the browser | `0006_scope_search_keywords_to_owner.down.sql` (data loss) |
 | 2026-09-28 | `0007_create_login_codes.sql` | Two-step login codes (MFA) | new table `login_codes` + index `login_codes_user_created_idx`; RLS on, no anon/authenticated policies or grants, `service_role` only | Yes — additive table, server-only access | `0007_create_login_codes.down.sql` (data loss: pending codes) |
 | 2026-09-29 | `0008_add_estimated_cefr.sql` | Heuristisch geschätzte CEFR-Stufen speicherbar machen | `job_language_analysis.estimated_cefr` (nullable) + index `idx_jla_refnr_version` | Yes — additive nullable column and index only | `0008_add_estimated_cefr.down.sql` (drops estimated values only) |
+| 2026-10-03 | `0009_create_job_visa_feasibility.sql` | Evidence-based visa / work-permit feasibility per job | new table `job_visa_feasibility` (`status`, `flags`, `evidence`, `version`, `analysed_at`) + index on `status`; authenticated SELECT only, writes via service role | Yes — new table only | `0009_create_job_visa_feasibility.down.sql` (data loss: stored classifications, re-creatable) |
 
 ### 0006 — App-side dependency
 

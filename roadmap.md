@@ -37,6 +37,11 @@
 - [x] Gespeicherte Beschreibungen werden wiederverwendet statt erneut abgerufen
 - [x] Sprachfilter und Sprach-Badges auf der Seite "Jobs erkunden"
 
+# Explore pagination (in draft)
+
+- [x] Keep results visible while the next page loads
+- [x] Pager above and below the list: first/last, numbered pages, jump-to-page, 25/50/100 per page, scroll to top
+
 # Open items
 
 - [ ] OPEN-001 (from 0006): server sync paths read all users' keywords with no owner filter — daily sync (api/public/cron/daily-sync.ts), manual sync and city keyword mode (sync.functions.ts), keyword count (sync.server.ts). No impact with one user; fix needs confirmation before code change.

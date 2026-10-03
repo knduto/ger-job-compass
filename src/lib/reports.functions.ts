@@ -75,3 +75,19 @@ export const getLanguageAnalysisStatus = createServerFn({ method: "POST" })
     const { countPendingAnalysis } = await import("./language-analysis.server");
     return countPendingAnalysis(supabaseAdmin);
   });
+export const runVisaBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ limit: z.number().int().min(1).max(25).default(25) }).parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { analyseVisaBatch } = await import("./visa-feasibility.server");
+    return analyseVisaBatch(supabaseAdmin, data.limit);
+  });
+
+export const visaPendingCount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { countPendingVisa } = await import("./visa-feasibility.server");
+    return countPendingVisa(supabaseAdmin);
+  });

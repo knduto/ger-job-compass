@@ -29,3 +29,4 @@
 - Every new database migration must include a matching rollback file in `drizzle/rollbacks/`, update `MIGRATIONS.md`, classify the migration as backward-compatible or breaking using the documented criteria, and flag ambiguous cases for review.
 - Every planned stage of work must be built in an isolated draft first, reviewed and explicitly accepted by John, and only then merged into the main project; never write staged work directly to main before that review.
 - Never commit `.env` or any file containing secrets; commit only `.env.example` with safe placeholder values, and keep `.env` plus environment-specific variants ignored by Git.
+- Auth gate reads the local session and never signs out on transient validation errors — prevents cross-tab logout cascades.

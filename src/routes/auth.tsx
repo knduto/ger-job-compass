@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { setRememberMe } from "@/lib/session-policy";
 import { requestLoginCode, verifyLoginCode } from "@/lib/mfa.functions";
 
 export const Route = createFileRoute("/auth")({
@@ -38,6 +39,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
@@ -100,6 +102,7 @@ function AuthPage() {
       const { tokenHash } = await checkCode({ data: { email, code: value } });
       const { error: otpError } = await supabase.auth.verifyOtp({ type: "email", token_hash: tokenHash });
       if (otpError) throw otpError;
+      setRememberMe(remember);
       navigate({ to: "/" });
     } catch (err) {
       setCode("");
@@ -139,6 +142,15 @@ function AuthPage() {
             <div className="space-y-2">
               <Label htmlFor="pw">Passwort</Label>
               <Input id="pw" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="remember" className="flex items-center gap-2 text-sm">
+                <input id="remember" type="checkbox" className="h-4 w-4 accent-primary" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+                Angemeldet bleiben
+              </label>
+              <p className="text-xs text-muted-foreground">
+                {remember ? "Du bleibst auf diesem Gerät angemeldet, bis du dich abmeldest." : "Du wirst nach 12 Stunden Inaktivität automatisch abgemeldet."}
+              </p>
             </div>
             {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={busy}>{busy ? "…" : "Weiter"}</Button>

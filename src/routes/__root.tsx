@@ -10,6 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { startActivityTracking } from "@/lib/session-policy";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -121,13 +122,25 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   useEffect(() => {
+    let timer: number | undefined;
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      if (event === "SIGNED_OUT") {
+        // Ignore spurious cross-tab SIGNED_OUT if a session still exists in storage.
+        window.clearTimeout(timer);
+        timer = window.setTimeout(async () => {
+          const { data: s } = await supabase.auth.getSession();
+          if (s.session) return;
+          queryClient.clear();
+          router.invalidate();
+        }, 400);
+        return;
+      }
       router.invalidate();
-      if (event === "SIGNED_OUT") queryClient.clear();
-      else queryClient.invalidateQueries();
+      queryClient.invalidateQueries();
     });
-    return () => data.subscription.unsubscribe();
+    const stopTracking = startActivityTracking();
+    return () => { data.subscription.unsubscribe(); window.clearTimeout(timer); stopTracking(); };
   }, [router, queryClient]);
 
   return (

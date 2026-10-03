@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { LayoutDashboard, Search, KanbanSquare, Building2, MapPin, Activity, RefreshCw, LogOut } from "lucide-react";
@@ -15,6 +16,7 @@ const NAV = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-sidebar p-4 text-sidebar-foreground md:flex">
@@ -39,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <button
-          onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/auth" }); }}
+          onClick={async () => { await queryClient.cancelQueries(); queryClient.clear(); await supabase.auth.signOut({ scope: "local" }); navigate({ to: "/auth", replace: true }); }}
           className="flex items-center gap-3 rounded-md px-3 py-2 text-sm opacity-70 hover:bg-sidebar-accent"
         >
           <LogOut className="h-4 w-4" /> Abmelden

@@ -137,6 +137,41 @@ export type Database = {
           },
         ]
       }
+      job_visa_feasibility: {
+        Row: {
+          analysed_at: string
+          evidence: string[]
+          flags: string[]
+          refnr: string
+          status: string
+          version: number
+        }
+        Insert: {
+          analysed_at?: string
+          evidence?: string[]
+          flags?: string[]
+          refnr: string
+          status?: string
+          version?: number
+        }
+        Update: {
+          analysed_at?: string
+          evidence?: string[]
+          flags?: string[]
+          refnr?: string
+          status?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_visa_feasibility_refnr_fkey"
+            columns: ["refnr"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["refnr"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           alle_berufe: string[]

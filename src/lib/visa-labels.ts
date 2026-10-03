@@ -18,7 +18,7 @@ export const VISA_FLAG_LABELS: Record<string, string> = {
 };
 export const VISA_BADGE_CLASS: Record<string, string> = {
   international_friendly: "bg-success text-success-foreground",
-  work_permit_required: "bg-warning text-warning-foreground",
+  work_permit_required: "bg-secondary text-secondary-foreground border border-border",
   restricted: "bg-destructive text-destructive-foreground",
   unspecified: "bg-muted text-muted-foreground",
 };

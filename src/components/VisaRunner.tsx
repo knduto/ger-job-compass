@@ -19,7 +19,7 @@ async function statusCounts() {
   }
   const u = await db.from("job_visa_feasibility").select("refnr", { count: "exact", head: true }).contains("flags", ["unavailable"]);
   if (u.error) throw new Error(u.error.message);
-  out.unavailable = u.count ?? 0;
+  out["unavailable"] = u.count ?? 0;
   return out;
 }
 
@@ -30,6 +30,7 @@ export function VisaRunner() {
   const counts = useQuery({ queryKey: ["visa-counts"], queryFn: statusCounts });
   const [state, setState] = useState<"idle" | "running" | "paused">("idle");
   const ctl = useRef<"run" | "pause" | "stop">("run");
+  const c = () => ctl.current as "run" | "pause" | "stop";
   const [progress, setProgress] = useState<{ analysed: number; pending: number; total: number } | null>(null);
   const [unavailable, setUnavailable] = useState(0);
   const live = progress ?? status.data ?? null;
@@ -39,8 +40,8 @@ export function VisaRunner() {
     ctl.current = "run"; setState("running");
     try {
       for (;;) {
-        if (ctl.current === "stop") break;
-        if (ctl.current === "pause") { setState("paused"); return; }
+        if (c() === "stop") break;
+        if (c() === "pause") { setState("paused"); return; }
         const r = await runFn({ data: { limit: 25 } });
         if (r.errors.length) toast.error(r.errors[0]);
         if (r.unavailable) setUnavailable((n) => n + r.unavailable);
@@ -49,7 +50,7 @@ export function VisaRunner() {
       }
       toast.success("Visum-Analyse abgeschlossen");
     } catch (e) { toast.error((e as Error).message); }
-    finally { if (ctl.current !== "pause") { setState("idle"); await Promise.all([status.refetch(), counts.refetch()]); } }
+    finally { if (c() !== "pause") { setState("idle"); await Promise.all([status.refetch(), counts.refetch()]); } }
   }
 
   return (
@@ -59,7 +60,7 @@ export function VisaRunner() {
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold">Massenanalyse Visum / Arbeitserlaubnis</h3>
-            <p className="text-xs text-muted-foreground">{live ? `${fmt(live.analysed)} analysiert · ${fmt(live.pending)} offen · ${pct.toFixed(1)} % von ${fmt(live.total)} · ${fmt(unavailable || counts.data?.unavailable || 0)} nicht mehr verfügbar` : status.error ? (status.error as Error).message : "Zählerstand wird geladen…"}</p>
+            <p className="text-xs text-muted-foreground">{live ? `${fmt(live.analysed)} analysiert · ${fmt(live.pending)} offen · ${pct.toFixed(1)} % von ${fmt(live.total)} · ${fmt(unavailable || counts.data?.["unavailable"] || 0)} nicht mehr verfügbar` : status.error ? (status.error as Error).message : "Zählerstand wird geladen…"}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" disabled={state === "running" || live?.pending === 0} onClick={run}><RefreshCw className={`mr-2 h-4 w-4 ${state === "running" ? "animate-spin" : ""}`} />{state === "paused" ? "Fortsetzen" : "Analyse starten"}</Button>
@@ -72,7 +73,7 @@ export function VisaRunner() {
       </div>
       <div className="overflow-hidden rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr><th className="px-3 py-2 text-left">Status</th><th className="px-3 py-2 text-right">Stellen</th></tr></thead><tbody>
         {Object.entries(VISA_STATUS_LABELS).map(([k, label]) => <tr key={k} className="border-t"><td className="px-3 py-2">{label}</td><td className="px-3 py-2 text-right font-mono">{counts.data ? fmt(counts.data[k]) : "–"}</td></tr>)}
-        <tr className="border-t text-muted-foreground"><td className="px-3 py-2">davon Anzeige nicht mehr verfügbar</td><td className="px-3 py-2 text-right font-mono">{counts.data ? fmt(counts.data.unavailable) : "–"}</td></tr>
+        <tr className="border-t text-muted-foreground"><td className="px-3 py-2">davon Anzeige nicht mehr verfügbar</td><td className="px-3 py-2 text-right font-mono">{counts.data ? fmt(counts.data["unavailable"]) : "–"}</td></tr>
       </tbody></table></div>
     </section>
   );

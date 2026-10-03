@@ -138,7 +138,7 @@ function Explore() {
       else if (s.sort === "oldest") q = q.order("published_from", { ascending: true });
       else q = q.order("published_from", { ascending: false, nullsFirst: false });
       q = q.range((page - 1) * PER, page * PER - 1);
-      const r = await must(q);
+      const r: any = await must(q);
       return { rows: (r.data ?? []) as unknown as JobListItem[], count: r.count ?? 0 };
     },
   });

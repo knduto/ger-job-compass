@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ const schema = z.object({
   status: fallback(z.enum(["aktiv", "abgelaufen", "alle"]), "aktiv").default("aktiv"),
   sort: fallback(z.string(), "newest").default("newest"),
   page: fallback(z.number().int(), 1).default(1),
+  per: fallback(z.number().int(), 25).default(25),
 });
 
 const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
@@ -52,8 +54,43 @@ export const Route = createFileRoute("/_authenticated/explore")({
   component: Explore,
 });
 
-const PER = 25;
+const PER_OPTIONS = [25, 50, 100] as const;
 const sel = "h-9 w-full rounded-md border bg-background px-2 text-sm";
+
+function pageList(page: number, pages: number): (number | "…")[] {
+  const set = new Set([1, pages, page - 1, page, page + 1].filter((n) => n >= 1 && n <= pages));
+  const sorted = [...set].sort((a, b) => a - b);
+  const out: (number | "…")[] = [];
+  sorted.forEach((n, i) => { if (i > 0 && n - sorted[i - 1] > 1) out.push("…"); out.push(n); });
+  return out;
+}
+
+function Pager({ page, pages, per, loading, onPage, onPer }: { page: number; pages: number; per: number; loading: boolean; onPage: (n: number) => void; onPer: (n: number) => void }) {
+  const [jump, setJump] = useState("");
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-1">
+        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPage(1)} aria-label="Erste Seite">«</Button>
+        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>Zurück</Button>
+        {pageList(page, pages).map((n, i) => n === "…"
+          ? <span key={`e${i}`} className="px-1 text-muted-foreground">…</span>
+          : <Button key={n} size="sm" variant={n === page ? "default" : "ghost"} onClick={() => onPage(n)} aria-current={n === page ? "page" : undefined}>{n}</Button>)}
+        <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>Weiter</Button>
+        <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => onPage(pages)} aria-label="Letzte Seite">»</Button>
+        {loading && <span className="ml-2 text-xs text-muted-foreground">Lade…</span>}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-muted-foreground">Seite {page} von {pages}</span>
+        <Input className="h-8 w-20" type="number" min={1} max={pages} placeholder="Gehe zu" value={jump}
+          onChange={(e) => setJump(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { const n = Math.round(Number(jump)); if (n >= 1) { onPage(Math.min(n, pages)); setJump(""); } } }} />
+        <select className="h-8 rounded-md border bg-background px-2" value={per} onChange={(e) => onPer(Number(e.target.value))} aria-label="Stellen pro Seite">
+          {PER_OPTIONS.map((n) => <option key={n} value={n}>{n} / Seite</option>)}
+        </select>
+      </div>
+    </div>
+  );
+}
 
 function Explore() {
   const s = Route.useSearch();
@@ -61,10 +98,14 @@ function Explore() {
   const qc = useQueryClient();
   const set = (patch: Partial<typeof s>) => navigate({ search: (p) => ({ ...p, ...patch, page: patch.page ?? 1 }) });
   const page = Math.max(1, s.page);
+  const PER = (PER_OPTIONS as readonly number[]).includes(s.per) ? s.per : 25;
+  const listTop = useRef<HTMLElement>(null);
+  const goPage = (n: number) => { set({ page: n }); listTop.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
 
   const cities = useQuery({ queryKey: ["city_stats"], queryFn: fetchAllCityStats });
   const res = useQuery({
     queryKey: ["explore", s],
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const lang = s.language;
       const join = lang === "pending" ? "!left" : lang ? "!inner" : "";
@@ -162,8 +203,9 @@ function Explore() {
           </div>
           <Button variant="outline" className="w-full" onClick={() => navigate({ search: {} as any })}>Filter zurücksetzen</Button>
         </aside>
-        <section>
-          <div className="rounded-lg border bg-card">
+        <section ref={listTop} className="scroll-mt-4">
+          <Pager page={page} pages={pages} per={PER} loading={res.isFetching} onPage={goPage} onPer={(n) => set({ per: n })} />
+          <div className={`mt-3 rounded-lg border bg-card transition-opacity ${res.isPlaceholderData ? "opacity-60" : ""}`}>
             {res.isLoading && <p className="p-4 text-sm text-muted-foreground">Lade…</p>}
             {res.error && <p className="p-4 text-sm text-destructive">{(res.error as Error).message}</p>}
             {res.data?.rows.length === 0 && <p className="p-4 text-sm text-muted-foreground">Keine Stellen für diese Filter.</p>}
@@ -176,11 +218,7 @@ function Explore() {
               } />
             ))}
           </div>
-          <div className="mt-4 flex items-center justify-between text-sm">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => set({ page: page - 1 })}>Zurück</Button>
-            <span>Seite {page} von {pages}</span>
-            <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => set({ page: page + 1 })}>Weiter</Button>
-          </div>
+          <div className="mt-3"><Pager page={page} pages={pages} per={PER} loading={res.isFetching} onPage={goPage} onPer={(n) => set({ per: n })} /></div>
         </section>
       </div>
     </>

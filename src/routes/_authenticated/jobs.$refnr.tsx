@@ -11,6 +11,7 @@ import { salaryText } from "@/components/JobRow";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CONTRACT_LABELS } from "@/lib/it-fields";
+import { VISA_BADGE_CLASS, VISA_FLAG_LABELS, VISA_STATUS_LABELS } from "@/lib/visa-labels";
 
 export const Route = createFileRoute("/_authenticated/jobs/$refnr")({
   head: () => ({
@@ -35,6 +36,14 @@ function JobDetail() {
     queryFn: async () => (await must(supabase.from("jobs").select("*").eq("refnr", refnr).maybeSingle())).data,
   });
   const detail = useQuery({ queryKey: ["job-detail", refnr], queryFn: () => detailFn({ data: { refnr } }), enabled: !!job.data });
+  const visa = useQuery({
+    queryKey: ["job-visa", refnr],
+    queryFn: async () => {
+      const r = await (supabase as any).from("job_visa_feasibility").select("status,flags,evidence,analysed_at").eq("refnr", refnr).maybeSingle();
+      if (r.error) throw new Error(r.error.message);
+      return r.data as { status: string; flags: string[]; evidence: string[]; analysed_at: string } | null;
+    },
+  });
   const j = job.data;
   if (job.isLoading) return <p className="text-muted-foreground">Lade…</p>;
   if (!j) return <p>Stelle nicht gefunden. <Link to="/explore" className="underline">Zurück</Link></p>;
@@ -74,6 +83,17 @@ function JobDetail() {
           {detail.data?.fetched_at && <p className="mt-4 text-xs text-muted-foreground">Abgerufen: {fmtDateTime(detail.data.fetched_at)}</p>}
         </article>
         <aside className="space-y-4 text-sm">
+          <div className="rounded-lg border bg-card p-4">
+            <h3 className="mb-2 font-semibold">Chancenkarte & Arbeitserlaubnis</h3>
+            {visa.isLoading ? <p className="text-muted-foreground">Lade…</p> : visa.error ? <p className="text-destructive">{(visa.error as Error).message}</p> : !visa.data ? <p className="text-muted-foreground">Noch nicht analysiert.</p> : (
+              <div className="space-y-2">
+                <Badge className={VISA_BADGE_CLASS[visa.data.status]}>{VISA_STATUS_LABELS[visa.data.status] ?? visa.data.status}</Badge>
+                {visa.data.flags.length > 0 && <div className="flex flex-wrap gap-1">{visa.data.flags.map((f: string) => <Badge key={f} variant="outline">{VISA_FLAG_LABELS[f] ?? f}</Badge>)}</div>}
+                {visa.data.evidence.map((e: string, i: number) => <blockquote key={i} className="border-l-2 border-border pl-2 text-xs italic text-muted-foreground">„{e}“</blockquote>)}
+                <p className="text-xs text-muted-foreground">Abgeleitet ausschließlich aus der gespeicherten Stellenbeschreibung ({fmtDate(visa.data.analysed_at)}). Keine Rechtsberatung.</p>
+              </div>
+            )}
+          </div>
           <div className="rounded-lg border bg-card p-4">
             <h3 className="mb-2 font-semibold">Arbeitgeber</h3>
             <p>{j.employer ?? "–"}</p>

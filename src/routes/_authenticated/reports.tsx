@@ -15,6 +15,7 @@ import { IT_BERUFSFELDER } from "@/lib/it-fields";
 import { getLanguageAnalysisStatus, getReportData, processLanguageBatch, type ReportFilters } from "@/lib/reports.functions";
 import { buildReportMetrics, employerKind, type ReportJob } from "@/lib/report-metrics";
 import { addTrackedCity, fetchAllCityStats, fetchTrackedCities, must, removeTrackedCity } from "@/lib/queries";
+import { VisaRunner } from "@/components/VisaRunner";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({ meta: [
@@ -155,6 +156,7 @@ function Reports() {
         <Button variant="outline" className="self-end" onClick={() => setFilters(defaultFilters)}>Filter zurücksetzen</Button>
       </div>
     </section>
+    <VisaRunner />
     {report.isLoading ? <p className="py-12 text-center text-muted-foreground">Bericht wird berechnet…</p> : report.error ? <p className="py-12 text-center text-destructive">{(report.error as Error).message}</p> : !rows.length ? <p className="py-12 text-center text-muted-foreground">Keine Stellen entsprechen diesen Filtern.</p> : <>
       <section className="mb-8">
         <h2 className="mb-3 text-lg font-semibold">Entscheidungsübersicht</h2>

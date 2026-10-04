@@ -1,4 +1,4 @@
-import { jobDetails, politeDelay } from "./ba-api.server";
+import { analysisBacklog, runAnalysisBatch } from "./analysis-batch.server";
 
 type Admin = any;
 
@@ -57,102 +57,30 @@ export function classifyLanguage(description: string | null | undefined) {
   };
 }
 
-const PAGE = 1000;
-
-async function countRows(admin: Admin, table: string, apply?: (query: any) => any) {
-  let query = admin.from(table).select("refnr", { count: "exact", head: true });
-  if (apply) query = apply(query);
-  const { count, error } = await query;
-  if (error) throw new Error(error.message);
-  return count ?? 0;
+export function countPendingAnalysis(admin: Admin) {
+  return analysisBacklog(admin, "language");
 }
 
-export async function countPendingAnalysis(admin: Admin) {
-  const total = await countRows(admin, "jobs");
-  const analysed = await countRows(admin, "job_language_analysis");
-  return { pending: Math.max(0, total - analysed), analysed, total };
-}
-
-/** Paged left-anti-join: page through jobs, subtract refnrs already analysed, until `limit` pending are found. */
-async function collectPending(admin: Admin, limit: number) {
-  const pending: string[] = [];
-  for (const expired of [false, true]) {
-    if (pending.length >= limit) break;
-    for (let from = 0; pending.length < limit; from += PAGE) {
-      const { data, error } = await admin.from("jobs").select("refnr").eq("expired", expired)
-        .order("published_from", { ascending: false, nullsFirst: false }).range(from, from + PAGE - 1);
-      if (error) throw new Error(error.message);
-      const chunk = (data ?? []).map((row: any) => row.refnr as string);
-      if (!chunk.length) break;
-      // Subtract in small slices: a single .in() with 1000 refnrs exceeds the request URL limit.
-      const doneSet = new Set<string>();
-      for (let i = 0; i < chunk.length; i += 150) {
-        const done = await admin.from("job_language_analysis").select("refnr").in("refnr", chunk.slice(i, i + 150));
-        if (done.error) throw new Error(done.error.message);
-        for (const row of done.data ?? []) doneSet.add(row.refnr as string);
-      }
-      for (const refnr of chunk) {
-        if (!doneSet.has(refnr)) pending.push(refnr);
-        if (pending.length >= limit) break;
-      }
-      if (chunk.length < PAGE) break;
-    }
-  }
-  return pending;
-}
-
-export async function analyseLanguageBatch(admin: Admin, limit = 20) {
-  const size = Math.max(1, Math.min(25, Math.floor(limit)));
-  const pending = await collectPending(admin, size);
-  let processed = 0;
-  let unavailable = 0;
-  const errors: string[] = [];
-  for (const refnr of pending) {
-    try {
-      // Reuse an already stored description: no need to call the agency again.
-      const cached = await admin.from("job_details").select("description").eq("refnr", refnr).maybeSingle();
-      if (cached.error) throw new Error(cached.error.message);
-      let description: string | null = cached.data?.description ?? null;
-
-      if (description === null) {
-        const raw = await jobDetails(refnr);
-        description = raw.stellenangebotsBeschreibung ?? null;
-        const detailError = await admin.from("job_details").upsert({ refnr, description, raw, fetched_at: new Date().toISOString() }, { onConflict: "refnr" });
-        if (detailError.error) throw new Error(detailError.error.message);
-        await politeDelay();
-      }
-
-      const result = classifyLanguage(description);
-      const analysisError = await admin.from("job_language_analysis").upsert({ refnr, ...result }, { onConflict: "refnr" });
-      if (analysisError.error) throw new Error(analysisError.error.message);
-      processed++;
-    } catch (error) {
-      if ((error as any)?.notFound) {
-        // Posting removed at the agency: record it as permanently handled so it never re-queues.
-        const now = new Date().toISOString();
-        const detail = await admin.from("job_details").upsert(
-          { refnr, description: null, raw: { not_found: true, status: 404, code: "STELLENANGEBOT_NICHT_GEFUNDEN" }, fetched_at: now },
-          { onConflict: "refnr" },
-        );
-        const analysis = await admin.from("job_language_analysis").upsert(
-          {
-            refnr, classification: "unknown", cefr_level: null, estimated_cefr: null,
-            german_required: null, english_accessible: null,
-            evidence: ["Arbeitsagentur: Stellenangebot nicht mehr verfügbar (404)"],
-            extraction_version: EXTRACTION_VERSION, analysed_at: now,
-          },
-          { onConflict: "refnr" },
-        );
-        if (detail.error || analysis.error) errors.push(`${refnr}: ${(detail.error ?? analysis.error)!.message}`);
-        else unavailable++;
-        await politeDelay();
-        continue;
-      }
-      errors.push(`${refnr}: ${(error as Error).message}`);
-      await politeDelay();
-    }
-  }
-  const { pending: remaining } = await countPendingAnalysis(admin);
-  return { processed, unavailable, requested: pending.length, remaining, errors: errors.slice(0, 5) };
+export function analyseLanguageBatch(admin: Admin, limit = 10) {
+  return runAnalysisBatch(admin, "language", {
+    limit,
+    save: async (refnr, description) => {
+      const res = await admin.from("job_language_analysis").upsert({ refnr, ...classifyLanguage(description) }, { onConflict: "refnr" });
+      if (res.error) throw new Error(res.error.message);
+    },
+    // Posting removed at the agency: record it as permanently handled so it never re-queues.
+    saveUnavailable: async (refnr, now) => {
+      const res = await admin.from("job_language_analysis").upsert(
+        {
+          refnr, classification: "unknown", cefr_level: null, estimated_cefr: null,
+          german_required: null, english_accessible: null,
+          evidence: ["Arbeitsagentur: Stellenangebot nicht mehr verfügbar (404)"],
+          extraction_version: EXTRACTION_VERSION, analysed_at: now,
+        },
+        { onConflict: "refnr" },
+      );
+      if (res.error) throw new Error(res.error.message);
+    },
+  });
 }
 

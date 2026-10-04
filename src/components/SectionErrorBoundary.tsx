@@ -5,6 +5,7 @@ import { reportLovableError } from "@/lib/lovable-error-reporting";
 type Props = {
   children: ReactNode;
   title: string;
+  description?: string;
 };
 
 type State = {
@@ -28,10 +29,10 @@ export class SectionErrorBoundary extends Component<Props, State> {
   override render() {
     if (this.state.error) {
       return (
-        <section className="rounded-lg border border-destructive bg-card p-4" role="alert">
+        <section className="mb-4 rounded-lg border border-destructive bg-card p-4" role="alert">
           <h2 className="font-semibold">{this.props.title}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Dieser Bereich konnte nicht geladen werden. Der restliche Live-Abruf bleibt verfügbar.
+            {this.props.description ?? "Dieser Bereich konnte nicht geladen werden. Der restliche Live-Abruf bleibt verfügbar."}
           </p>
           <Button className="mt-3" variant="outline" onClick={() => this.setState({ error: null })}>
             Erneut versuchen

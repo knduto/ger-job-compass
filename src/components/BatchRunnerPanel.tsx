@@ -10,8 +10,8 @@ export function BatchRunnerPanel(props: {
   startLabel: string;
   runner: Runner;
   base: { analysed: number; pending: number; total: number } | null | undefined;
-  baseError?: unknown;
-  extraUnavailable?: number;
+  baseError?: unknown | undefined;
+  extraUnavailable?: number | undefined;
   testId: string;
 }) {
   const { runner } = props;

@@ -14,12 +14,23 @@ export class BaNotFoundError extends Error {
   }
 }
 
-export async function baFetch(path: string, attempt = 0): Promise<any> {
-  const res = await fetch(`${BASE}${path}`, { headers: HEADERS });
+export type BaFetchOptions = { timeoutMs?: number; retries?: number };
+
+export async function baFetch(path: string, attempt = 0, opts: BaFetchOptions = {}): Promise<any> {
+  const retries = opts.retries ?? 3;
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { headers: HEADERS, ...(opts.timeoutMs ? { signal: AbortSignal.timeout(opts.timeoutMs) } : {}) });
+  } catch (error) {
+    if ((error as Error)?.name === "TimeoutError" || (error as Error)?.name === "AbortError") {
+      throw new Error(`Arbeitsagentur antwortet nicht (Zeitlimit ${Math.round((opts.timeoutMs ?? 0) / 1000)} s)`);
+    }
+    throw error;
+  }
   if (res.status === 429 || res.status >= 500) {
-    if (attempt < 3) {
+    if (attempt < retries) {
       await sleep(1000 * 2 ** attempt);
-      return baFetch(path, attempt + 1);
+      return baFetch(path, attempt + 1, opts);
     }
   }
   if (!res.ok) {
@@ -31,6 +42,7 @@ export async function baFetch(path: string, attempt = 0): Promise<any> {
   }
   return res.json();
 }
+
 
 
 export type BaSearchParams = {
@@ -50,9 +62,9 @@ export function searchJobs(p: BaSearchParams) {
   return baFetch(`/pc/v6/jobs?${q.toString()}`);
 }
 
-export function jobDetails(refnr: string) {
+export function jobDetails(refnr: string, opts: BaFetchOptions = {}) {
   const enc = Buffer.from(refnr, "utf8").toString("base64");
-  return baFetch(`/pc/v4/jobdetails/${encodeURIComponent(enc)}`);
+  return baFetch(`/pc/v4/jobdetails/${encodeURIComponent(enc)}`, 0, opts);
 }
 
 export const politeDelay = () => sleep(350);

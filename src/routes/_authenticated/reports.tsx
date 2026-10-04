@@ -12,10 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { IT_BERUFSFELDER } from "@/lib/it-fields";
-import { getLanguageAnalysisStatus, getReportData, processLanguageBatch, type ReportFilters } from "@/lib/reports.functions";
+import { getReportData, type ReportFilters } from "@/lib/reports.functions";
 import { buildReportMetrics, employerKind, type ReportJob } from "@/lib/report-metrics";
 import { addTrackedCity, fetchAllCityStats, fetchTrackedCities, must, removeTrackedCity } from "@/lib/queries";
 import { VisaRunner } from "@/components/VisaRunner";
+import { LanguageRunner } from "@/components/LanguageRunner";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({ meta: [
@@ -47,50 +49,12 @@ const ESTIMATED_OPTIONS: [string, string][] = [
 
 function Reports() {
   const reportFn = useServerFn(getReportData);
-  const analyseFn = useServerFn(processLanguageBatch);
-  const statusFn = useServerFn(getLanguageAnalysisStatus);
   const [filters, setFilters] = useState(defaultFilters);
   const [weights, setWeights] = useState(defaultWeights);
   const [selected, setSelected] = useState<string[]>([]);
   const [detailCity, setDetailCity] = useState<string | null>(null);
   const [showScoreInfo, setShowScoreInfo] = useState(false);
-  const [runState, setRunState] = useState<"idle" | "running" | "paused">("idle");
-  const runControl = useRef<"run" | "pause" | "stop">("run");
-  const [progress, setProgress] = useState<{ analysed: number; pending: number; total: number } | null>(null);
-  const [unavailable, setUnavailable] = useState(0);
-  const status = useQuery({ queryKey: ["language-status"], queryFn: () => statusFn({ data: {} as any }) });
-  const live = progress ?? status.data ?? null;
-  const livePct = live && live.total ? 100 * live.analysed / live.total : 0;
 
-  const control = () => runControl.current as "run" | "pause" | "stop";
-  async function runBulk() {
-    runControl.current = "run";
-    setRunState("running");
-    try {
-      for (;;) {
-        if (control() === "stop") break;
-        if (control() === "pause") { setRunState("paused"); return; }
-        const result = await analyseFn({ data: { limit: 25 } });
-        if (result.errors.length) toast.error(result.errors[0]);
-        if (result.unavailable) setUnavailable((n) => n + result.unavailable);
-        setProgress((current) => {
-          const total = current?.total ?? live?.total ?? result.remaining + result.processed;
-          return { total, pending: result.remaining, analysed: Math.max(0, total - result.remaining) };
-        });
-        // Stop instead of looping forever when a block makes no progress at all.
-        // Removed postings count as progress: they are permanently recorded.
-        if (result.remaining === 0 || result.requested === 0 || result.processed + result.unavailable === 0) break;
-      }
-      toast.success("Massenanalyse abgeschlossen");
-    } catch (error) {
-      toast.error((error as Error).message);
-    } finally {
-      if (control() !== "pause") {
-        setRunState("idle");
-        await Promise.all([status.refetch(), report.refetch()]);
-      }
-    }
-  }
 
   const cities = useQuery({ queryKey: ["city_stats"], queryFn: fetchAllCityStats });
   const tracked = useQuery({ queryKey: ["tracked_cities"], queryFn: fetchTrackedCities });
@@ -156,7 +120,9 @@ function Reports() {
         <Button variant="outline" className="self-end" onClick={() => setFilters(defaultFilters)}>Filter zurücksetzen</Button>
       </div>
     </section>
-    <VisaRunner />
+    <SectionErrorBoundary title="Visum-Massenanalyse ist vorübergehend nicht verfügbar" description="Dieser Bereich konnte nicht geladen werden. Der restliche Bericht bleibt verfügbar.">
+      <VisaRunner />
+    </SectionErrorBoundary>
     {report.isLoading ? <p className="py-12 text-center text-muted-foreground">Bericht wird berechnet…</p> : report.error ? <p className="py-12 text-center text-destructive">{(report.error as Error).message}</p> : !rows.length ? <p className="py-12 text-center text-muted-foreground">Keine Stellen entsprechen diesen Filtern.</p> : <>
       <section className="mb-8">
         <h2 className="mb-3 text-lg font-semibold">Entscheidungsübersicht</h2>
@@ -165,21 +131,9 @@ function Reports() {
       </section>
       <section className="mb-8">
         <div className="mb-3"><h2 className="text-lg font-semibold">Deutsch & Zugänglichkeit</h2><p className="text-sm text-muted-foreground">Explizite Nachweise aus Stellenbeschreibungen; geschätzte Niveaus stehen separat darunter.</p></div>
-        <div className="mb-4 rounded-lg border bg-card p-4" data-testid="bulk-runner">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold">Massenanalyse der Sprachanforderungen</h3>
-              <p className="text-xs text-muted-foreground">{live ? `${fmt(live.analysed)} analysiert · ${fmt(live.pending)} offen · ${livePct.toFixed(1)} % von ${fmt(live.total)}${unavailable ? ` · ${fmt(unavailable)} nicht mehr verfügbar` : ""}` : "Zählerstand wird geladen…"}</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" disabled={runState === "running" || (live?.pending === 0)} onClick={runBulk}><RefreshCw className={`mr-2 h-4 w-4 ${runState === "running" ? "animate-spin" : ""}`} />Massenanalyse starten</Button>
-              <Button variant="outline" disabled={runState !== "running"} onClick={() => { runControl.current = "pause"; }}>Pause</Button>
-              <Button variant="outline" disabled={runState === "idle"} onClick={() => { runControl.current = "stop"; setRunState("idle"); void Promise.all([status.refetch(), report.refetch()]); }}>Stopp</Button>
-            </div>
-          </div>
-          <div className="h-2 overflow-hidden rounded bg-muted"><div className="h-2 rounded bg-accent transition-all" style={{ width: `${Math.min(100, livePct)}%` }} /></div>
-          <p className="mt-2 text-xs text-muted-foreground">Läuft in Blöcken von 25 Stellen; bereits analysierte Stellen werden nie erneut abgerufen. {runState === "paused" ? "Pausiert." : runState === "running" ? "Läuft…" : ""}</p>
-        </div>
+        <SectionErrorBoundary title="Sprach-Massenanalyse ist vorübergehend nicht verfügbar" description="Dieser Bereich konnte nicht geladen werden. Der restliche Bericht bleibt verfügbar.">
+          <LanguageRunner onSettled={() => report.refetch()} />
+        </SectionErrorBoundary>
         <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]"><div className="overflow-hidden rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted"><tr><th className="px-3 py-2 text-left">Kategorie</th><th className="px-3 py-2 text-right">Stellen</th></tr></thead><tbody>{metrics.language.map((r) => <tr className="border-t" key={r.label}><td className="px-3 py-2">{r.label}</td><td className="px-3 py-2 text-right font-mono">{fmt(r.count)}</td></tr>)}<tr className="border-t-2 bg-muted/50"><td className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground" colSpan={2}>Geschätzt (heuristisch, aus expliziten Formulierungen)</td></tr>{metrics.estimatedLanguage.map((r) => <tr className="border-t italic text-muted-foreground" key={r.label}><td className="px-3 py-2">{r.label}</td><td className="px-3 py-2 text-right font-mono">{fmt(r.count)}</td></tr>)}</tbody></table></div><div className="h-72 rounded-lg border bg-card p-4"><ResponsiveContainer width="100%" height="100%"><BarChart data={metrics.cities.slice(0, 12)}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/><XAxis dataKey="city" fontSize={10}/><YAxis fontSize={10}/><Tooltip/><Bar dataKey="englishPct" name="Englisch zugänglich %" fill="var(--chart-2)"/></BarChart></ResponsiveContainer></div></div>
       </section>
       <section className="mb-8">

@@ -59,9 +59,11 @@ export const getReportData = createServerFn({ method: "POST" })
     return { rows: filtered, snapshots: snapshotResult.data ?? [], generatedAt: new Date().toISOString() };
   });
 
+const batchInput = z.object({ limit: z.number().int().min(1).max(25).default(10) });
+
 export const processLanguageBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ limit: z.number().int().min(1).max(25).default(20) }).parse(data))
+  .inputValidator((data) => batchInput.parse(data))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { analyseLanguageBatch } = await import("./language-analysis.server");
@@ -75,9 +77,10 @@ export const getLanguageAnalysisStatus = createServerFn({ method: "POST" })
     const { countPendingAnalysis } = await import("./language-analysis.server");
     return countPendingAnalysis(supabaseAdmin);
   });
+
 export const runVisaBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ limit: z.number().int().min(1).max(25).default(25) }).parse(data))
+  .inputValidator((data) => batchInput.parse(data))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { analyseVisaBatch } = await import("./visa-feasibility.server");

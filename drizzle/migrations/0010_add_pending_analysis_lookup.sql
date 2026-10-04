@@ -1,6 +1,3 @@
--- 0010_add_pending_analysis_lookup
--- Fast pending-work lookup for the language and visa mass analyses.
--- One SQL anti-join replaces paged client-side subtraction; active jobs first, newest first.
 CREATE INDEX IF NOT EXISTS idx_jobs_expired_published_refnr
   ON public.jobs (expired, published_from DESC NULLS LAST) INCLUDE (refnr);
 

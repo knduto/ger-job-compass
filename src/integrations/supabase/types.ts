@@ -488,6 +488,18 @@ export type Database = {
       }
     }
     Functions: {
+      analysis_backlog: {
+        Args: { p_kind: string }
+        Returns: {
+          analysed: number
+          pending: number
+          total: number
+        }[]
+      }
+      pending_analysis_refs: {
+        Args: { p_kind: string; p_limit?: number }
+        Returns: string[]
+      }
       set_daily_sync_token: { Args: { t: string }; Returns: undefined }
     }
     Enums: {

@@ -54,3 +54,10 @@
 
 - [ ] OPEN-001 (from 0006): server sync paths read all users' keywords with no owner filter — daily sync (api/public/cron/daily-sync.ts), manual sync and city keyword mode (sync.functions.ts), keyword count (sync.server.ts). No impact with one user; fix needs confirmation before code change.
 - [ ] Provide the complete raw `AGENTS.md` read from the corrected draft before acceptance.
+
+# Reports mass-analysis crash repair (in draft)
+
+- [x] Single SQL lookup for pending work (staged; applies when the draft is accepted), small 10-job blocks with an 18 s time cap
+- [x] Inline stop message with retry, local error boundaries around both runners, counters protected from auto-translation
+- [ ] Copy staged migration into drizzle/migrations/0010 and add drizzle/rollbacks/0010 (+ missing 0009 rollback) — blocked: drizzle folder is read-only in this draft (MIGRATIONS.md row added)
+- [ ] Signed-in multi-block run of both runners — blocked: the new lookup only exists after this draft is accepted

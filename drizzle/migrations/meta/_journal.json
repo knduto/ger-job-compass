@@ -71,13 +71,6 @@
       "when": 1790997808368,
       "tag": "0009_create_job_visa_feasibility",
       "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1791093300000,
-      "tag": "0010_add_pending_analysis_lookup",
-      "breakpoints": true
     }
   ]
 }

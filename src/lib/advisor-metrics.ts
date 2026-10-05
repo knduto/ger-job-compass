@@ -66,7 +66,7 @@ const f1 = (n: number) => n.toLocaleString("de-DE", { maximumFractionDigits: 1 }
 export function tradeOffs(rows: CityRow[]): string[] {
   const out: string[] = [];
   for (let i = 0; i < rows.length; i++) for (let j = i + 1; j < rows.length; j++) {
-    const a = rows[i], b = rows[j];
+    const a = rows[i]!, b = rows[j]!;
     if (a.active && b.active) {
       const [big, small] = a.active >= b.active ? [a, b] : [b, a];
       const diff = ((big.active - small.active) / small.active) * 100;

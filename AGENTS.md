@@ -30,4 +30,4 @@
 - Every planned stage of work must be built in an isolated draft first, reviewed and explicitly accepted by John, and only then merged into the main project; never write staged work directly to main before that review.
 - Never commit `.env` or any file containing secrets; commit only `.env.example` with safe placeholder values, and keep `.env` plus environment-specific variants ignored by Git.
 - Auth gate reads the local session and never signs out on transient validation errors — prevents cross-tab logout cascades.
-- Advisor page () derives rankings and trade-off statements deterministically from stored aggregates in  (pure, no AI text) — keeps settlement advice reproducible and evidence-based.
+- The Strategie-Berater (`/advisor`) derives rankings and trade-off statements deterministically from stored aggregates in `src/lib/advisor-metrics.ts` (pure functions, no AI text) — keeps settlement advice reproducible and evidence-based.

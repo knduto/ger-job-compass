@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { LayoutDashboard, Search, KanbanSquare, Building2, MapPin, Activity, RefreshCw, LogOut } from "lucide-react";
+import { LayoutDashboard, Search, KanbanSquare, Building2, MapPin, Activity, RefreshCw, LogOut, Compass } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const NAV = [
@@ -10,6 +10,7 @@ const NAV = [
   { to: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { to: "/employers", label: "Arbeitgeber", icon: Building2 },
   { to: "/reports", label: "Städte-Reports", icon: MapPin },
+  { to: "/advisor", label: "Strategie-Berater", icon: Compass },
   { to: "/data-health", label: "Datenqualität", icon: Activity },
   { to: "/sync", label: "Live-Abruf", icon: RefreshCw },
 ] as const;

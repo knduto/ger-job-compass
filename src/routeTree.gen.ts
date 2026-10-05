@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedAdvisorRouteImport } from './routes/_authenticated/advisor'
 import { Route as AuthenticatedDataHealthRouteImport } from './routes/_authenticated/data-health'
 import { Route as AuthenticatedEmployersRouteImport } from './routes/_authenticated/employers'
 import { Route as AuthenticatedExploreRouteImport } from './routes/_authenticated/explore'
@@ -42,6 +43,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdvisorRoute = AuthenticatedAdvisorRouteImport.update({
+  id: '/advisor',
+  path: '/advisor',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDataHealthRoute = AuthenticatedDataHealthRouteImport.update({
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/advisor': typeof AuthenticatedAdvisorRoute
   '/data-health': typeof AuthenticatedDataHealthRoute
   '/employers': typeof AuthenticatedEmployersRoute
   '/explore': typeof AuthenticatedExploreRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/advisor': typeof AuthenticatedAdvisorRoute
   '/data-health': typeof AuthenticatedDataHealthRoute
   '/employers': typeof AuthenticatedEmployersRoute
   '/explore': typeof AuthenticatedExploreRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/advisor': typeof AuthenticatedAdvisorRoute
   '/_authenticated/data-health': typeof AuthenticatedDataHealthRoute
   '/_authenticated/employers': typeof AuthenticatedEmployersRoute
   '/_authenticated/explore': typeof AuthenticatedExploreRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/advisor'
     | '/data-health'
     | '/employers'
     | '/explore'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/reset-password'
+    | '/advisor'
     | '/data-health'
     | '/employers'
     | '/explore'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/reset-password'
+    | '/_authenticated/advisor'
     | '/_authenticated/data-health'
     | '/_authenticated/employers'
     | '/_authenticated/explore'
@@ -240,6 +252,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/advisor': {
+      id: '/_authenticated/advisor'
+      path: '/advisor'
+      fullPath: '/advisor'
+      preLoaderRoute: typeof AuthenticatedAdvisorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/data-health': {
@@ -323,6 +342,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdvisorRoute: typeof AuthenticatedAdvisorRoute
   AuthenticatedDataHealthRoute: typeof AuthenticatedDataHealthRoute
   AuthenticatedEmployersRoute: typeof AuthenticatedEmployersRoute
   AuthenticatedExploreRoute: typeof AuthenticatedExploreRoute
@@ -335,6 +355,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdvisorRoute: AuthenticatedAdvisorRoute,
   AuthenticatedDataHealthRoute: AuthenticatedDataHealthRoute,
   AuthenticatedEmployersRoute: AuthenticatedEmployersRoute,
   AuthenticatedExploreRoute: AuthenticatedExploreRoute,

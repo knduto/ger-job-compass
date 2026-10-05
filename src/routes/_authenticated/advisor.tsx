@@ -49,7 +49,7 @@ function Advisor({ data }: { data: AdvisorData }) {
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">1 · Ranking / Executive settlement ranking</h2>
         <p className="text-sm text-muted-foreground">
-          {usingTracked ? `${cities.length} beobachtete Städte` : "Keine beobachteten Städte — Top 30 nach aktiven Stellen"}. Jeder Faktor wird über die angezeigten Städte auf 0–100 normiert und mit seinem Gewicht multipliziert; fehlende Daten zählen 0.
+          {usingTracked ? `${cities.length} beobachtete Städte` : "Keine beobachteten Städte — Top 30 nach aktiven Stellen"}. Jeder Faktor wird relativ zu den angezeigten Städten auf 0–100 normiert (beste = 100, schwächste = 0 — auch kleine absolute Unterschiede werden so sichtbar, daher immer die Rohwerte prüfen) und mit seinem Gewicht multipliziert; fehlende Daten zählen 0.
         </p>
         <div className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-5">
           {FACTORS.map((f) => (
@@ -137,7 +137,7 @@ function rawTxt(r: CityRow, k: FactorKey) {
   return pctTxt(r.momentumPct);
 }
 
-const SHADES = ["bg-primary", "bg-accent", "bg-destructive", "bg-secondary-foreground", "bg-muted-foreground"];
+const SHADES = ["bg-chart-2", "bg-chart-1", "bg-chart-3", "bg-chart-4", "bg-chart-5"];
 
 function ContribBar({ r }: { r: CityRow }) {
   return (
@@ -161,7 +161,7 @@ function Small({ n }: { n: number }) {
 }
 
 function DataBasis({ data, rows }: { data: AdvisorData; rows: CityRow[] }) {
-  const active = data.cityStats.reduce((a: number, c: any) => a + Number(c.active_jobs ?? 0), 0);
+  const active = data.activeJobs;
   const shown = rows.reduce((a, r) => a + r.active, 0);
   const lastSeen = data.cityStats.reduce((m: string, c: any) => (c.last_seen && c.last_seen > m ? c.last_seen : m), "");
   const d = (s: string | null) => (s ? new Date(s).toLocaleString("de-DE") : "—");

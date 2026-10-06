@@ -1,7 +1,7 @@
 import { jobDetails, politeDelay } from "./ba-api.server";
 
 type Admin = any;
-export type AnalysisKind = "language" | "visa";
+export type AnalysisKind = "language" | "visa" | "tech";
 
 /** Hard per-request processing budget; stays well below hosting limits. */
 export const BATCH_BUDGET_MS = 18_000;

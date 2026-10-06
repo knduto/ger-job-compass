@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { IT_BERUFSFELDER } from "@/lib/it-fields";
+import { REMOTE_LABELS, SENIORITY_LABELS, SKILLS } from "@/lib/tech-stack";
 import { JOB_LIST_COLS, fetchAllCityStats, must, saveToPipeline } from "@/lib/queries";
 
 const schema = z.object({
@@ -23,6 +24,10 @@ const schema = z.object({
   worktime: fallback(z.string(), "").default(""),
   language: fallback(z.string(), "").default(""),
   visa: fallback(z.string(), "").default(""),
+  skills: fallback(z.preprocess((v) => (typeof v === "string" ? (v ? [v] : []) : v), z.string().array()), []).default([]),
+  seniority: fallback(z.string(), "").default(""),
+  remote: fallback(z.string(), "").default(""),
+  tech: fallback(z.string(), "").default(""),
   homeoffice: fallback(z.preprocess((v) => v === true || v === "true", z.boolean()), false).default(false),
   salary: fallback(z.preprocess((v) => v === true || v === "true", z.boolean()), false).default(false),
   days: fallback(z.coerce.number().int().min(0), 0).default(0),
@@ -112,7 +117,17 @@ function Explore() {
       const join = lang === "pending" ? "!left" : lang ? "!inner" : "";
       const visa = s.visa;
       const vjoin = visa === "pending" ? "!left" : visa ? "!inner" : "";
-      let q: any = supabase.from("jobs").select(`${JOB_LIST_COLS},job_language_analysis${join}(${LANG_COLS}),job_visa_feasibility${vjoin}(status,flags)`, { count: "exact" });
+      const techPending = s.tech === "pending";
+      const techFiltered = !techPending && (s.skills.length > 0 || !!s.seniority || !!s.remote);
+      const tjoin = techPending ? "!left" : techFiltered ? "!inner" : "";
+      let q: any = supabase.from("jobs").select(`${JOB_LIST_COLS},job_language_analysis${join}(${LANG_COLS}),job_visa_feasibility${vjoin}(status,flags),job_tech_stack${tjoin}(core_skills,bonus_skills,seniority,remote_mode,flags)`, { count: "exact" });
+      if (techPending) q = q.is("job_tech_stack", null);
+      else {
+        // Each selected skill must appear as core or bonus requirement.
+        for (const sk of s.skills) q = q.or(`core_skills.cs.{"${sk.replace(/"/g, "")}"},bonus_skills.cs.{"${sk.replace(/"/g, "")}"}`, { referencedTable: "job_tech_stack" });
+        if (s.seniority) q = q.eq("job_tech_stack.seniority", s.seniority);
+        if (s.remote) q = q.eq("job_tech_stack.remote_mode", s.remote);
+      }
       if (visa === "pending") q = q.is("job_visa_feasibility", null);
       else if (visa) q = q.eq("job_visa_feasibility.status", visa);
       if (lang === "pending") q = q.is("job_language_analysis", null);
@@ -181,6 +196,28 @@ function Explore() {
               <option value="pending">Noch nicht analysiert</option>
             </select>
           </div>
+          <div className="space-y-1"><Label>Tech-Stack (alle ausgewählten)</Label>
+            <select className={sel} value="" onChange={(e) => e.target.value && !s.skills.includes(e.target.value) && set({ skills: [...s.skills, e.target.value] })} translate="no">
+              <option value="">Technologie hinzufügen…</option>
+              {[...SKILLS].sort((a, b) => a.name.localeCompare(b.name)).map((k) => <option key={k.name} value={k.name}>{k.name}</option>)}
+            </select>
+            {s.skills.length > 0 && <div className="flex flex-wrap gap-1 pt-1" translate="no">{s.skills.map((k) => (
+              <button key={k} type="button" className="rounded-full border px-2 py-0.5 text-xs hover:bg-muted" onClick={() => set({ skills: s.skills.filter((x) => x !== k) })} aria-label={`${k} entfernen`}>{k} ×</button>
+            ))}</div>}
+          </div>
+          <div className="space-y-1"><Label>Seniorität</Label>
+            <select className={sel} value={s.seniority} onChange={(e) => set({ seniority: e.target.value })}>
+              <option value="">Alle</option>
+              {Object.entries(SENIORITY_LABELS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1"><Label>Arbeitsmodell</Label>
+            <select className={sel} value={s.remote} onChange={(e) => set({ remote: e.target.value })}>
+              <option value="">Alle</option>
+              {Object.entries(REMOTE_LABELS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+          </div>
+          <label className="flex items-center justify-between">Tech-Stack noch nicht analysiert <Switch checked={s.tech === "pending"} onCheckedChange={(v) => set({ tech: v ? "pending" : "" })} /></label>
           <div className="space-y-2"><Label>IT-Berufsfeld</Label>
             {IT_BERUFSFELDER.map((f) => (
               <label key={f} className="flex items-start gap-2">

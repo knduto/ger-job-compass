@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { CONTRACT_LABELS } from "@/lib/it-fields";
 import { fmt, fmtDate } from "./AppShell";
+import { REMOTE_LABELS, SENIORITY_LABELS } from "@/lib/tech-stack";
 import { VISA_BADGE_CLASS, VISA_STATUS_LABELS } from "@/lib/visa-labels";
 
 export type JobLanguage = {
@@ -16,7 +17,14 @@ export type JobListItem = {
   first_seen: string; last_seen: string; expired: boolean; external_url: string | null;
   job_language_analysis?: JobLanguage | JobLanguage[] | null;
   job_visa_feasibility?: JobVisa | JobVisa[] | null;
+  job_tech_stack?: JobTech | JobTech[] | null;
 };
+export type JobTech = { core_skills: string[]; bonus_skills: string[]; seniority: string; remote_mode: string; flags: string[] };
+export function jobTech(job: JobListItem): JobTech | null {
+  const v = job.job_tech_stack;
+  if (!v) return null;
+  return Array.isArray(v) ? v[0] ?? null : v;
+}
 export type JobVisa = { status: string; flags: string[] };
 export function jobVisa(job: JobListItem): JobVisa | null {
   const v = job.job_visa_feasibility;
@@ -42,6 +50,7 @@ export function JobRow({ job, action }: { job: JobListItem; action?: React.React
   const sal = salaryText(job);
   const lang = jobLanguage(job);
   const visa = jobVisa(job);
+  const tech = jobTech(job);
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-3 last:border-0 hover:bg-muted/50">
       <div className="min-w-0 flex-1">
@@ -61,7 +70,16 @@ export function JobRow({ job, action }: { job: JobListItem; action?: React.React
           {lang?.english_accessible && <Badge variant="secondary">Englisch zugänglich</Badge>}
           {visa && visa.status !== "unspecified" && <Badge className={VISA_BADGE_CLASS[visa.status]}>{VISA_STATUS_LABELS[visa.status]}</Badge>}
           {lang?.german_required && !lang.cefr_level && !lang.estimated_cefr && <Badge variant="outline">Deutsch erforderlich</Badge>}
+          {tech && tech.seniority !== "unspecified" && <Badge variant="secondary">{SENIORITY_LABELS[tech.seniority]}</Badge>}
+          {tech && tech.remote_mode !== "unspecified" && <Badge variant="secondary">{REMOTE_LABELS[tech.remote_mode]}</Badge>}
         </div>
+        {tech && (tech.core_skills.length > 0 || tech.bonus_skills.length > 0) && (
+          <div className="mt-1.5 flex flex-wrap gap-1" translate="no">
+            {tech.core_skills.slice(0, 8).map((s) => <Badge key={s}>{s}</Badge>)}
+            {tech.core_skills.length > 8 && <Badge variant="outline">+{tech.core_skills.length - 8}</Badge>}
+            {tech.bonus_skills.slice(0, 4).map((s) => <Badge key={`b-${s}`} variant="outline">{s}</Badge>)}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">

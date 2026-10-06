@@ -144,9 +144,8 @@ export function cleanText(s: string | null | undefined) {
   return (s ?? "")
     .replace(/<\s*(?:br|\/p|\/li|\/h\d|li)[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
-    .replace(/[*_#`>]+/g, " ")
     .split(/\r?\n/)
-    .map((l) => l.replace(/\s+/g, " ").trim())
+    .map((l) => l.replace(/^\s*#+\s*/, "").replace(/[*`>]+|(?<![\p{L}\p{N}])_+|_+(?![\p{L}\p{N}])/gu, " ").replace(/\s+/g, " ").trim())
     .filter(Boolean);
 }
 const clip = (line: string, idx: number, len: number) => {
@@ -168,9 +167,9 @@ export function extractSkills(description: string | null | undefined) {
   let section: "core" | "bonus" | "other" = "other";
   for (const line of lines) {
     if (isHeading(line)) {
-      if (BONUS_CUE.test(line)) { section = "bonus"; continue; }
-      if (CORE_HEAD.test(line)) { section = "core"; continue; }
-      if (OTHER_HEAD.test(line)) { section = "other"; continue; }
+      if (BONUS_CUE.test(line)) section = "bonus";
+      else if (CORE_HEAD.test(line)) section = "core";
+      else if (OTHER_HEAD.test(line)) section = "other";
     }
     // Split long lines into clauses so a "von Vorteil" only affects its own sentence.
     const clauses = line.split(/(?<=[.;!?])\s+/);
@@ -228,7 +227,7 @@ export function extractSeniority(title: string | null | undefined, description: 
 }
 
 const R_STRONG = /(?:100\s?%|vollständig|komplett|ausschließlich|full(?:y)?|zu 100)\s*(?:remote|im home[\s-]?office|home[\s-]?office|mobil(?:es arbeiten)?)|remote[\s-]first|fully[\s-]remote|full[\s-]remote|remote[\s-]only|deutschlandweit\s+remote|remote\s+(?:aus|from)\s+(?:ganz\s+)?(?:deutschland|germany|anywhere)/giu;
-const R_HYBRID = /hybrid\w*|\d{1,2}\s?(?:%|tage?|days?)\s*(?:pro|per|die|in der|a)?\s*(?:woche|week)?\s*(?:im\s+|von\s+)?(?:home[\s-]?office|remote|mobil)|anteilig\w*\s+(?:home[\s-]?office|remote|mobil\w*)|teilweise\s+(?:home[\s-]?office|remote|mobil\w*)|mobiles arbeiten|mobile working|home[\s-]?office[\s-]?(?:tage|anteil|möglichkeit|option)|(?:möglichkeit|option)\s+(?:zum|zu|auf|for)\s+(?:home[\s-]?office|remote|mobile\w*)/giu;
+const R_HYBRID = /hybrid\w*|(?<!\d)\d{1,2}\s?(?:%|tage?|days?)\s*(?:pro|per|die|in der|a)?\s*(?:woche|week)?\s*(?:im\s+|von\s+)?(?:home[\s-]?office|remote|mobil)|anteilig\w*\s+(?:home[\s-]?office|remote|mobil\w*)|teilweise\s+(?:home[\s-]?office|remote|mobil\w*)|mobiles arbeiten|mobile working|home[\s-]?office[\s-]?(?:tage|anteil|möglichkeit|option)|(?:möglichkeit|option)\s+(?:zum|zu|auf|for)\s+(?:home[\s-]?office|remote|mobile\w*)/giu;
 const R_WEAK = /\bremote\b|home[\s-]?office/giu;
 const R_ONSITE = /vor[\s-]ort[\s-]?(?:tätigkeit|präsenz|arbeit|position|job)|präsenz(?:pflicht|tätigkeit|arbeit)|on[\s-]?site(?![\s-]?(?:visit|support))|kein(?:e)?\s+(?:home[\s-]?office|remote)|(?:home[\s-]?office|remote(?:arbeit)?)\s+(?:ist\s+)?(?:leider\s+)?nicht\s+möglich|100\s?%\s*vor\s+ort/giu;
 

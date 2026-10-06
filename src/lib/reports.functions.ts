@@ -94,3 +94,20 @@ export const visaPendingCount = createServerFn({ method: "POST" })
     const { countPendingVisa } = await import("./visa-feasibility.server");
     return countPendingVisa(supabaseAdmin);
   });
+
+export const runTechBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => batchInput.parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { analyseTechBatch } = await import("./tech-stack.server");
+    return analyseTechBatch(supabaseAdmin, data.limit);
+  });
+
+export const techPendingCount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { countPendingTech } = await import("./tech-stack.server");
+    return countPendingTech(supabaseAdmin);
+  });

@@ -16,6 +16,7 @@ import { getReportData, type ReportFilters } from "@/lib/reports.functions";
 import { buildReportMetrics, employerKind, type ReportJob } from "@/lib/report-metrics";
 import { addTrackedCity, fetchAllCityStats, fetchTrackedCities, must, removeTrackedCity } from "@/lib/queries";
 import { VisaRunner } from "@/components/VisaRunner";
+import { TechStackRunner } from "@/components/TechStackRunner";
 import { LanguageRunner } from "@/components/LanguageRunner";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 
@@ -122,6 +123,9 @@ function Reports() {
     </section>
     <SectionErrorBoundary title="Visum-Massenanalyse ist vorübergehend nicht verfügbar" description="Dieser Bereich konnte nicht geladen werden. Der restliche Bericht bleibt verfügbar.">
       <VisaRunner />
+    </SectionErrorBoundary>
+    <SectionErrorBoundary title="Tech-Stack-Analyse ist vorübergehend nicht verfügbar" description="Dieser Bereich konnte nicht geladen werden. Der restliche Bericht bleibt verfügbar.">
+      <TechStackRunner />
     </SectionErrorBoundary>
     {report.isLoading ? <p className="py-12 text-center text-muted-foreground">Bericht wird berechnet…</p> : report.error ? <p className="py-12 text-center text-destructive">{(report.error as Error).message}</p> : !rows.length ? <p className="py-12 text-center text-muted-foreground">Keine Stellen entsprechen diesen Filtern.</p> : <>
       <section className="mb-8">

@@ -78,6 +78,13 @@
       "when": 1791093290268,
       "tag": "0010_add_pending_analysis_lookup",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791255954190,
+      "tag": "0011_add_job_tech_stack",
+      "breakpoints": true
     }
   ]
 }

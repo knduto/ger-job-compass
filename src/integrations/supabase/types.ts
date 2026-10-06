@@ -137,6 +137,50 @@ export type Database = {
           },
         ]
       }
+      job_tech_stack: {
+        Row: {
+          analysed_at: string
+          bonus_skills: string[]
+          core_skills: string[]
+          evidence: string[]
+          flags: string[]
+          refnr: string
+          remote_mode: string
+          seniority: string
+          version: number
+        }
+        Insert: {
+          analysed_at?: string
+          bonus_skills?: string[]
+          core_skills?: string[]
+          evidence?: string[]
+          flags?: string[]
+          refnr: string
+          remote_mode?: string
+          seniority?: string
+          version?: number
+        }
+        Update: {
+          analysed_at?: string
+          bonus_skills?: string[]
+          core_skills?: string[]
+          evidence?: string[]
+          flags?: string[]
+          refnr?: string
+          remote_mode?: string
+          seniority?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_tech_stack_refnr_fkey"
+            columns: ["refnr"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["refnr"]
+          },
+        ]
+      }
       job_visa_feasibility: {
         Row: {
           analysed_at: string

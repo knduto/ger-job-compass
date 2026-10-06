@@ -11,6 +11,7 @@ import { salaryText } from "@/components/JobRow";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CONTRACT_LABELS } from "@/lib/it-fields";
+import { REMOTE_LABELS, SENIORITY_LABELS, parseEvidence } from "@/lib/tech-stack";
 import { VISA_BADGE_CLASS, VISA_FLAG_LABELS, VISA_STATUS_LABELS } from "@/lib/visa-labels";
 
 export const Route = createFileRoute("/_authenticated/jobs/$refnr")({
@@ -42,6 +43,14 @@ function JobDetail() {
       const r = await (supabase as any).from("job_visa_feasibility").select("status,flags,evidence,analysed_at").eq("refnr", refnr).maybeSingle();
       if (r.error) throw new Error(r.error.message);
       return r.data as { status: string; flags: string[]; evidence: string[]; analysed_at: string } | null;
+    },
+  });
+  const tech = useQuery({
+    queryKey: ["job-tech", refnr],
+    queryFn: async () => {
+      const r = await (supabase as any).from("job_tech_stack").select("core_skills,bonus_skills,seniority,remote_mode,flags,evidence,analysed_at").eq("refnr", refnr).maybeSingle();
+      if (r.error) throw new Error(r.error.message);
+      return r.data as { core_skills: string[]; bonus_skills: string[]; seniority: string; remote_mode: string; flags: string[]; evidence: string[]; analysed_at: string } | null;
     },
   });
   const j = job.data;
@@ -91,6 +100,23 @@ function JobDetail() {
                 {visa.data.flags.length > 0 && <div className="flex flex-wrap gap-1">{visa.data.flags.map((f: string) => <Badge key={f} variant="outline">{VISA_FLAG_LABELS[f] ?? f}</Badge>)}</div>}
                 {visa.data.evidence.map((e: string, i: number) => <blockquote key={i} className="border-l-2 border-border pl-2 text-xs italic text-muted-foreground">„{e}“</blockquote>)}
                 <p className="text-xs text-muted-foreground">Abgeleitet ausschließlich aus der gespeicherten Stellenbeschreibung ({fmtDate(visa.data.analysed_at)}). Keine Rechtsberatung.</p>
+              </div>
+            )}
+          </div>
+          <div className="rounded-lg border bg-card p-4">
+            <h3 className="mb-2 font-semibold">Tech-Stack & Anforderungen</h3>
+            {tech.isLoading ? <p className="text-muted-foreground">Lade…</p> : tech.error ? <p className="text-destructive">{(tech.error as Error).message}</p> : !tech.data ? <p className="text-muted-foreground">Noch nicht analysiert.</p> : tech.data.flags.includes("unavailable") ? <p className="text-muted-foreground">Anzeige bei der Arbeitsagentur nicht mehr verfügbar.</p> : (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1">
+                  <Badge variant="secondary">Seniorität: {SENIORITY_LABELS[tech.data.seniority] ?? tech.data.seniority}</Badge>
+                  <Badge variant="secondary">Arbeitsmodell: {REMOTE_LABELS[tech.data.remote_mode] ?? tech.data.remote_mode}</Badge>
+                </div>
+                <div><p className="text-xs font-medium">Kern</p><div className="flex flex-wrap gap-1" translate="no">{tech.data.core_skills.length ? tech.data.core_skills.map((k) => <Badge key={k}>{k}</Badge>) : <span className="text-xs text-muted-foreground">Keine erkannt</span>}</div></div>
+                <div><p className="text-xs font-medium">Bonus</p><div className="flex flex-wrap gap-1" translate="no">{tech.data.bonus_skills.length ? tech.data.bonus_skills.map((k) => <Badge key={k} variant="outline">{k}</Badge>) : <span className="text-xs text-muted-foreground">Keine erkannt</span>}</div></div>
+                <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Belegstellen ({tech.data.evidence.length})</summary>
+                  <div className="mt-1 space-y-1">{tech.data.evidence.map((e, i) => { const p = parseEvidence(e); return <blockquote key={i} className="border-l-2 border-border pl-2 italic text-muted-foreground"><span className="not-italic font-medium text-foreground" translate="no">{p.value}</span> („{p.kind === "core" ? "Kern" : p.kind === "bonus" ? "Bonus" : p.kind === "seniority" ? "Seniorität" : "Arbeitsmodell"}“): „{p.excerpt}“</blockquote>; })}</div>
+                </details>
+                <p className="text-xs text-muted-foreground">Abgeleitet ausschließlich aus Titel und gespeicherter Beschreibung ({fmtDate(tech.data.analysed_at)}).</p>
               </div>
             )}
           </div>

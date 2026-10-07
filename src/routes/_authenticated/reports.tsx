@@ -15,8 +15,9 @@ import { IT_BERUFSFELDER } from "@/lib/it-fields";
 import { getReportData, type ReportFilters } from "@/lib/reports.functions";
 import { buildReportMetrics, employerKind, type ReportJob } from "@/lib/report-metrics";
 import { addTrackedCity, fetchAllCityStats, fetchTrackedCities, must, removeTrackedCity } from "@/lib/queries";
-import { VisaRunner } from "@/components/VisaRunner";
-import { TechStackRunner } from "@/components/TechStackRunner";
+import { VisaRunner, statusCounts } from "@/components/VisaRunner";
+import { TechStackRunner, aggregate } from "@/components/TechStackRunner";
+import { useQueryClient } from "@tanstack/react-query";
 import { LanguageRunner } from "@/components/LanguageRunner";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 
@@ -50,6 +51,7 @@ const ESTIMATED_OPTIONS: [string, string][] = [
 
 function Reports() {
   const reportFn = useServerFn(getReportData);
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState(defaultFilters);
   const [weights, setWeights] = useState(defaultWeights);
   const [selected, setSelected] = useState<string[]>([]);
@@ -85,8 +87,22 @@ function Reports() {
 
   async function pdf() {
     if (!rows.length) return;
-    const { downloadReportPdf } = await import("@/lib/report-pdf");
-    await downloadReportPdf({ filters, total: rows.length, analysed: metrics.analysed, generatedAt: report.data?.generatedAt ?? new Date().toISOString(), cities: metrics.cities, language: metrics.language, estimatedLanguage: metrics.estimatedLanguage, topEmployers: metrics.employerCounts.slice(0, 15), methodology });
+    try {
+      const { downloadReportPdf } = await import("@/lib/report-pdf");
+      const [visa, tech] = await Promise.all([
+        queryClient.fetchQuery({ queryKey: ["visa-counts"], queryFn: statusCounts }).catch(() => null),
+        queryClient.fetchQuery({ queryKey: ["tech-agg"], queryFn: aggregate }).catch(() => null),
+      ]);
+      await downloadReportPdf({
+        filters, total: rows.length, analysed: metrics.analysed, generatedAt: report.data?.generatedAt ?? new Date().toISOString(),
+        cities: rankedCities, lifecycleCities: metrics.cities.slice(0, 20),
+        kpis: { topCity, newestCity, salaryRatePct: 100 * salaryValues.length / Math.max(1, rows.length * 2), analysedPct },
+        language: metrics.language, estimatedLanguage: metrics.estimatedLanguage,
+        employers: metrics.employerCounts.slice(0, 15).map(([name, count]) => ({ name, count, kind: employerKind(name) })),
+        market: { largest: metrics.employerCounts[0], agencyPct: 100 * metrics.agency / rows.length, salaryMin: salaryValues.length ? Math.min(...salaryValues) : null, salaryMax: salaryValues.length ? Math.max(...salaryValues) : null },
+        visa, tech, trends: trends as any, methodology,
+      });
+    } catch (e) { toast.error(`PDF konnte nicht erstellt werden: ${(e as Error).message}`); }
   }
   async function excel() {
     if (!rows.length) return;

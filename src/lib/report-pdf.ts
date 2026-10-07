@@ -28,7 +28,7 @@ export async function buildReportPdf(input: ReportPdfInput) {
   const last = () => (doc as any).lastAutoTable.finalY as number;
   const h2 = (t: string, y: number) => { doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(20); doc.text(t, M, y); };
   const note = (t: string, y: number) => { doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(90); const w = doc.splitTextToSize(t, W); doc.text(w, M, y); doc.setTextColor(20); return y + w.length * 3.6; };
-  const table = (opts: any) => autoTable(doc, { theme: "striped", margin: { left: M, right: M }, styles: { font: "helvetica", fontSize: 8, cellPadding: 1.4, overflow: "linebreak" }, headStyles: { fillColor: HEAD, textColor: 255 }, ...opts });
+  const table = (opts: any) => autoTable(doc, { theme: "striped", margin: { left: M, right: M }, styles: { font: "helvetica", fontSize: 8, cellPadding: 1.4, overflow: "linebreak" }, headStyles: { fillColor: HEAD, textColor: 255 }, didParseCell: (d: any) => { if (d.section === "head") { const h = opts.columnStyles?.[d.column.index]?.halign; if (h) d.cell.styles.halign = h; } }, ...opts });
   const empty = (y: number) => { doc.setFont("helvetica", "italic"); doc.setFontSize(9); doc.setTextColor(110); doc.text(NO, M, y); doc.setTextColor(20); return y + 6; };
   const pageHead = (t: string) => { doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(110); doc.text(`Smart-DE-Reise · ${t}`, M, 10); doc.setTextColor(20); };
 

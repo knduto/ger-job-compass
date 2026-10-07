@@ -8,10 +8,10 @@ export type TrendRow = { date: string; active: number; new7: number; englishPct:
 
 export type ReportPdfInput = {
   filters: ReportFilters; total: number; analysed: number; generatedAt: string; cities: CityRow[]; lifecycleCities: CityRow[];
-  kpis: { topCity?: { city: string; score: number }; newestCity?: { city: string; new7: number }; salaryRatePct: number; analysedPct: number };
+  kpis: { topCity?: { city: string; score: number } | undefined; newestCity?: { city: string; new7: number } | undefined; salaryRatePct: number; analysedPct: number };
   language: { label: string; count: number }[]; estimatedLanguage: { label: string; count: number }[];
   employers: { name: string; count: number; kind: string }[];
-  market: { largest?: [string, number]; agencyPct: number; salaryMin: number | null; salaryMax: number | null };
+  market: { largest?: [string, number] | undefined; agencyPct: number; salaryMin: number | null; salaryMax: number | null };
   visa: Record<string, number> | null; tech: TechAgg | null; trends: TrendRow[]; methodology: string[];
 };
 

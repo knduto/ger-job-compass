@@ -12,7 +12,7 @@ const db = supabase as any;
 type Agg = { analysed: number; unavailable: number; core: [string, number][]; bonus: [string, number][]; seniority: Record<string, number>; remote: Record<string, number> };
 
 /** Aggregates all stored rows (paged) — counts come only from the database. */
-async function aggregate(): Promise<Agg> {
+export async function aggregate(): Promise<Agg> {
   const core = new Map<string, number>(), bonus = new Map<string, number>();
   const seniority: Record<string, number> = {}, remote: Record<string, number> = {};
   let analysed = 0, unavailable = 0;

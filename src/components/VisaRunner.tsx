@@ -8,7 +8,7 @@ import { useBatchRunner } from "@/lib/use-batch-runner";
 import { VISA_STATUS_LABELS } from "@/lib/visa-labels";
 
 const db = supabase as any;
-async function statusCounts() {
+export async function statusCounts() {
   const out: Record<string, number> = {};
   for (const s of Object.keys(VISA_STATUS_LABELS)) {
     const r = await db.from("job_visa_feasibility").select("refnr", { count: "exact", head: true }).eq("status", s);

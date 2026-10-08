@@ -85,6 +85,13 @@
       "when": 1791255954190,
       "tag": "0011_add_job_tech_stack",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791427345618,
+      "tag": "0012_create_city_housing_benchmarks",
+      "breakpoints": true
     }
   ]
 }

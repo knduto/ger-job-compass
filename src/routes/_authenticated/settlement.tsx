@@ -105,13 +105,13 @@ function BenchmarkEditor({ cities, benchmarks }: { cities: string[]; benchmarks:
 
   const edit = (b: Benchmark) => setF({ city: b.city, rent_cold_sqm: String(b.rent_cold_sqm), utilities_sqm: b.utilities_sqm == null ? "" : String(b.utilities_sqm), market_tightness: b.market_tightness, source_name: b.source_name, source_url: b.source_url ?? "", source_year: String(b.source_year), notes: b.notes ?? "" });
 
-  async function save() {
+  async function save(): Promise<void> {
     const rent = Number(f.rent_cold_sqm.replace(",", "."));
     const util = f.utilities_sqm.trim() ? Number(f.utilities_sqm.replace(",", ".")) : null;
-    if (!f.city.trim() || !(rent > 0 && rent < 100)) return toast.error("Stadt und gültige Kaltmiete €/m² angeben.");
-    if (util != null && !(util >= 0 && util < 50)) return toast.error("Nebenkosten €/m² ungültig.");
-    if (!f.source_name.trim()) return toast.error("Quelle ist Pflicht — keine Werte ohne Beleg.");
-    if (f.source_url && !/^https?:\/\//i.test(f.source_url)) return toast.error("Quell-Link muss mit http(s):// beginnen.");
+    if (!f.city.trim() || !(rent > 0 && rent < 100)) { toast.error("Stadt und gültige Kaltmiete €/m² angeben."); return; }
+    if (util != null && !(util >= 0 && util < 50)) { toast.error("Nebenkosten €/m² ungültig."); return; }
+    if (!f.source_name.trim()) { toast.error("Quelle ist Pflicht — keine Werte ohne Beleg."); return; }
+    if (f.source_url && !/^https?:\/\//i.test(f.source_url)) { toast.error("Quell-Link muss mit http(s):// beginnen."); return; }
     setBusy(true);
     const { error } = await supabase.from("city_housing_benchmarks").upsert({
       city: f.city.trim(), rent_cold_sqm: rent, utilities_sqm: util, market_tightness: f.market_tightness,
@@ -119,14 +119,14 @@ function BenchmarkEditor({ cities, benchmarks }: { cities: string[]; benchmarks:
       updated_at: new Date().toISOString(),
     } as any, { onConflict: "user_id,city" });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`Mietdaten für ${f.city} gespeichert`);
     setF(empty);
     qc.invalidateQueries({ queryKey: ["settlement"] });
   }
-  async function remove(id: string) {
+  async function remove(id: string): Promise<void> {
     const { error } = await supabase.from("city_housing_benchmarks").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["settlement"] });
   }
 

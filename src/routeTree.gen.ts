@@ -19,6 +19,7 @@ import { Route as AuthenticatedEmployersRouteImport } from './routes/_authentica
 import { Route as AuthenticatedExploreRouteImport } from './routes/_authenticated/explore'
 import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedSettlementRouteImport } from './routes/_authenticated/settlement'
 import { Route as AuthenticatedSyncRouteImport } from './routes/_authenticated/sync'
 import { Route as AuthenticatedEmployersNameRouteImport } from './routes/_authenticated/employers_.$name'
 import { Route as AuthenticatedJobsRefnrRouteImport } from './routes/_authenticated/jobs.$refnr'
@@ -75,6 +76,11 @@ const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettlementRoute = AuthenticatedSettlementRouteImport.update({
+  id: '/settlement',
+  path: '/settlement',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSyncRoute = AuthenticatedSyncRouteImport.update({
   id: '/sync',
   path: '/sync',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/explore': typeof AuthenticatedExploreRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/settlement': typeof AuthenticatedSettlementRoute
   '/sync': typeof AuthenticatedSyncRoute
   '/employers/$name': typeof AuthenticatedEmployersNameRoute
   '/jobs/$refnr': typeof AuthenticatedJobsRefnrRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/explore': typeof AuthenticatedExploreRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/settlement': typeof AuthenticatedSettlementRoute
   '/sync': typeof AuthenticatedSyncRoute
   '/': typeof AuthenticatedIndexRoute
   '/employers/$name': typeof AuthenticatedEmployersNameRoute
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/_authenticated/explore': typeof AuthenticatedExploreRoute
   '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/settlement': typeof AuthenticatedSettlementRoute
   '/_authenticated/sync': typeof AuthenticatedSyncRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/employers_/$name': typeof AuthenticatedEmployersNameRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
     | '/explore'
     | '/pipeline'
     | '/reports'
+    | '/settlement'
     | '/sync'
     | '/employers/$name'
     | '/jobs/$refnr'
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/explore'
     | '/pipeline'
     | '/reports'
+    | '/settlement'
     | '/sync'
     | '/'
     | '/employers/$name'
@@ -206,6 +217,7 @@ export interface FileRouteTypes {
     | '/_authenticated/explore'
     | '/_authenticated/pipeline'
     | '/_authenticated/reports'
+    | '/_authenticated/settlement'
     | '/_authenticated/sync'
     | '/_authenticated/'
     | '/_authenticated/employers_/$name'
@@ -296,6 +308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settlement': {
+      id: '/_authenticated/settlement'
+      path: '/settlement'
+      fullPath: '/settlement'
+      preLoaderRoute: typeof AuthenticatedSettlementRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/sync': {
       id: '/_authenticated/sync'
       path: '/sync'
@@ -348,6 +367,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedExploreRoute: typeof AuthenticatedExploreRoute
   AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedSettlementRoute: typeof AuthenticatedSettlementRoute
   AuthenticatedSyncRoute: typeof AuthenticatedSyncRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedEmployersNameRoute: typeof AuthenticatedEmployersNameRoute
@@ -361,6 +381,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedExploreRoute: AuthenticatedExploreRoute,
   AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedSettlementRoute: AuthenticatedSettlementRoute,
   AuthenticatedSyncRoute: AuthenticatedSyncRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedEmployersNameRoute: AuthenticatedEmployersNameRoute,

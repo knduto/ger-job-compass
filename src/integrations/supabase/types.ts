@@ -64,6 +64,51 @@ export type Database = {
           },
         ]
       }
+      city_housing_benchmarks: {
+        Row: {
+          city: string
+          created_at: string
+          id: string
+          market_tightness: string
+          notes: string | null
+          rent_cold_sqm: number
+          source_name: string
+          source_url: string | null
+          source_year: number
+          updated_at: string
+          user_id: string
+          utilities_sqm: number | null
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          id?: string
+          market_tightness?: string
+          notes?: string | null
+          rent_cold_sqm: number
+          source_name: string
+          source_url?: string | null
+          source_year: number
+          updated_at?: string
+          user_id?: string
+          utilities_sqm?: number | null
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          id?: string
+          market_tightness?: string
+          notes?: string | null
+          rent_cold_sqm?: number
+          source_name?: string
+          source_url?: string | null
+          source_year?: number
+          updated_at?: string
+          user_id?: string
+          utilities_sqm?: number | null
+        }
+        Relationships: []
+      }
       job_details: {
         Row: {
           description: string | null

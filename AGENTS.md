@@ -32,4 +32,4 @@
 - Never commit `.env` or any file containing secrets; commit only `.env.example` with safe placeholder values, and keep `.env` plus environment-specific variants ignored by Git.
 - Auth gate reads the local session and never signs out on transient validation errors — prevents cross-tab logout cascades.
 - The Strategie-Berater (`/advisor`) derives rankings and trade-off statements deterministically from stored aggregates in `src/lib/advisor-metrics.ts` (pure functions, no AI text) — keeps settlement advice reproducible and evidence-based.
-- Rent/settlement figures (`city_housing_benchmarks`, `src/lib/settlement-metrics.ts`) come only from per-user entries with a required source and year; missing values are shown as missing, never estimated — keeps settlement advice evidence-based.
+- Rent/settlement figures (`city_housing_benchmarks`, `user_settlement_settings`, `src/lib/settlement-metrics.ts`) come only from per-user entries with a required source and year; Warmmiete drives all budget/runway metrics, and missing utilities stay missing unless the user opts into their own cited national value (rows labelled as such) — keeps settlement advice evidence-based.

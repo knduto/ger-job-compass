@@ -68,6 +68,9 @@ export type Database = {
         Row: {
           city: string
           created_at: string
+          furnished_source_name: string | null
+          furnished_source_year: number | null
+          furnished_warm_month: number | null
           id: string
           market_tightness: string
           notes: string | null
@@ -77,11 +80,16 @@ export type Database = {
           source_year: number
           updated_at: string
           user_id: string
+          utilities_source_name: string | null
+          utilities_source_year: number | null
           utilities_sqm: number | null
         }
         Insert: {
           city: string
           created_at?: string
+          furnished_source_name?: string | null
+          furnished_source_year?: number | null
+          furnished_warm_month?: number | null
           id?: string
           market_tightness?: string
           notes?: string | null
@@ -91,11 +99,16 @@ export type Database = {
           source_year: number
           updated_at?: string
           user_id?: string
+          utilities_source_name?: string | null
+          utilities_source_year?: number | null
           utilities_sqm?: number | null
         }
         Update: {
           city?: string
           created_at?: string
+          furnished_source_name?: string | null
+          furnished_source_year?: number | null
+          furnished_warm_month?: number | null
           id?: string
           market_tightness?: string
           notes?: string | null
@@ -105,6 +118,8 @@ export type Database = {
           source_year?: number
           updated_at?: string
           user_id?: string
+          utilities_source_name?: string | null
+          utilities_source_year?: number | null
           utilities_sqm?: number | null
         }
         Relationships: []
@@ -533,6 +548,33 @@ export type Database = {
           city?: string
           created_at?: string
           id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settlement_settings: {
+        Row: {
+          national_utilities_source: string | null
+          national_utilities_sqm: number | null
+          national_utilities_year: number | null
+          updated_at: string
+          use_national_utilities: boolean
+          user_id: string
+        }
+        Insert: {
+          national_utilities_source?: string | null
+          national_utilities_sqm?: number | null
+          national_utilities_year?: number | null
+          updated_at?: string
+          use_national_utilities?: boolean
+          user_id?: string
+        }
+        Update: {
+          national_utilities_source?: string | null
+          national_utilities_sqm?: number | null
+          national_utilities_year?: number | null
+          updated_at?: string
+          use_national_utilities?: boolean
           user_id?: string
         }
         Relationships: []

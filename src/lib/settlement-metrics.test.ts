@@ -21,14 +21,14 @@ describe("settlement metrics", () => {
     expect(runwayMonths(10000, null, null, 0)).toBeNull();
   });
   it("row without utilities shows warm/runway as missing", () => {
-    const [r] = buildSettlementRows(["Leipzig"], { Leipzig: 50 }, [b({ utilities_sqm: null })], sim, off);
+    const r = buildSettlementRows(["Leipzig"], { Leipzig: 50 }, [b({ utilities_sqm: null })], sim, off)[0]!;
     expect(r.warm).toBeNull(); expect(r.runway).toBeNull(); expect(r.jobsPer100).toBeNull(); expect(r.kaution).toBe(1200);
   });
   it("national fallback applies only when enabled with source", () => {
     const nat = { enabled: true, sqm: 2.5, source: "DMB Betriebskostenspiegel", year: 2024 };
-    const [r] = buildSettlementRows(["Leipzig"], { Leipzig: 52 }, [b({ utilities_sqm: null })], sim, nat);
+    const r = buildSettlementRows(["Leipzig"], { Leipzig: 52 }, [b({ utilities_sqm: null })], sim, nat)[0]!;
     expect(r.warm).toBe(500); expect(r.utilitiesFallback).toBe(true); expect(r.jobsPer100).toBeCloseTo(10.4, 5);
-    const [r2] = buildSettlementRows(["Leipzig"], {}, [b({ utilities_sqm: null })], sim, { ...nat, source: null });
+    const r2 = buildSettlementRows(["Leipzig"], {}, [b({ utilities_sqm: null })], sim, { ...nat, source: null })[0]!;
     expect(r2.warm).toBeNull();
   });
 });

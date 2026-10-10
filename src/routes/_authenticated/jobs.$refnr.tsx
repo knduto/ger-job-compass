@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CONTRACT_LABELS } from "@/lib/it-fields";
 import { REMOTE_LABELS, SENIORITY_LABELS, parseEvidence } from "@/lib/tech-stack";
+import { CoverLetterDialog } from "@/components/CoverLetterDialog";
+import { useState } from "react";
 import { VISA_BADGE_CLASS, VISA_FLAG_LABELS, VISA_STATUS_LABELS } from "@/lib/visa-labels";
 
 export const Route = createFileRoute("/_authenticated/jobs/$refnr")({
@@ -32,6 +34,7 @@ function JobDetail() {
   const { refnr } = Route.useParams();
   const qc = useQueryClient();
   const detailFn = useServerFn(loadJobDetail);
+  const [letterOpen, setLetterOpen] = useState(false);
   const job = useQuery({
     queryKey: ["job", refnr],
     queryFn: async () => (await must(supabase.from("jobs").select("*").eq("refnr", refnr).maybeSingle())).data,
@@ -66,6 +69,7 @@ function JobDetail() {
         actions={
           <div className="flex gap-2">
             <Button onClick={async () => { try { await saveToPipeline(j.refnr); toast.success("In Pipeline gespeichert"); qc.invalidateQueries({ queryKey: ["applications"] }); } catch (e) { toast.error((e as Error).message); } }}>+ Pipeline</Button>
+            <Button variant="outline" onClick={() => setLetterOpen(true)}>Anschreiben</Button>
             <Button variant="outline" asChild><a href={j.external_url ?? baUrl} target="_blank" rel="noreferrer">Original-Anzeige</a></Button>
           </div>
         }
@@ -141,6 +145,7 @@ function JobDetail() {
           </div>
         </aside>
       </div>
+      <CoverLetterDialog refnr={j.refnr} open={letterOpen} onClose={() => setLetterOpen(false)} />
     </>
   );
 }

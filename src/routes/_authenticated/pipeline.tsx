@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { CoverLetterDialog } from "@/components/CoverLetterDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/pipeline")({
@@ -107,6 +108,7 @@ function EditDialog({ app, onClose }: { app: App; onClose: () => void }) {
     stage: app.stage, applied_at: app.applied_at ?? "", resume_version: app.resume_version ?? "",
     contact: app.contact ?? "", notes: app.notes ?? "", follow_up: app.follow_up ?? "",
   });
+  const [letterOpen, setLetterOpen] = useState(false);
   async function save() {
     const { error } = await supabase.from("applications").update({
       stage: f.stage, applied_at: f.applied_at || null, resume_version: f.resume_version.trim() || null,
@@ -136,7 +138,8 @@ function EditDialog({ app, onClose }: { app: App; onClose: () => void }) {
           <div className="col-span-2 space-y-1"><Label>Kontaktperson</Label><Input maxLength={200} value={f.contact} onChange={(e) => setF({ ...f, contact: e.target.value })} /></div>
           <div className="col-span-2 space-y-1"><Label>Notizen</Label><Textarea maxLength={5000} rows={4} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
         </div>
-        <div className="flex justify-between"><Button variant="ghost" className="text-destructive" onClick={remove}>Entfernen</Button><Button onClick={save}>Speichern</Button></div>
+        <div className="flex justify-between"><Button variant="ghost" className="text-destructive" onClick={remove}>Entfernen</Button><div className="flex gap-2"><Button variant="outline" onClick={() => setLetterOpen(true)}>Anschreiben</Button><Button onClick={save}>Speichern</Button></div></div>
+        <CoverLetterDialog refnr={app.refnr} open={letterOpen} onClose={() => { setLetterOpen(false); qc.invalidateQueries({ queryKey: ["applications"] }); }} />
       </DialogContent>
     </Dialog>
   );
